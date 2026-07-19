@@ -24,8 +24,13 @@ export default function PlayPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [elapsedMs, setElapsedMs] = useState(0);
+  const [opening, setOpening] = useState(false);
 
   useEffect(() => {
+    if (sessionStorage.getItem("moviesgame:opening") === "1") {
+      sessionStorage.removeItem("moviesgame:opening");
+      setOpening(true);
+    }
     const existing = loadSession();
     if (!existing) {
       router.replace("/");
@@ -84,6 +89,12 @@ export default function PlayPage() {
     const id = window.setInterval(tick, 50);
     return () => window.clearInterval(id);
   }, [session]);
+
+  useEffect(() => {
+    if (!opening || !titlePage) return;
+    const timer = window.setTimeout(() => setOpening(false), 1800);
+    return () => window.clearTimeout(timer);
+  }, [opening, titlePage]);
 
   function commit(next: GameSession) {
     saveSession(next);
@@ -203,8 +214,10 @@ export default function PlayPage() {
 
   if (!session) {
     return (
-      <main className="grid min-h-screen place-items-center text-[var(--muted-fg)]">
-        Loading session…
+      <main className="nb-dot-grid grid min-h-screen place-items-center bg-[#f4f0e8]">
+        <p className="border-4 border-black bg-[#ffd52e] px-6 py-4 font-[family-name:var(--font-mono)] text-xs font-black uppercase shadow-[6px_6px_0_#000]">
+          Loading session…
+        </p>
       </main>
     );
   }
@@ -215,7 +228,7 @@ export default function PlayPage() {
       : elapsedMs;
 
   return (
-    <main className="min-h-screen">
+    <main className="nb-dot-grid min-h-screen bg-[#f4f0e8] pb-10 text-black">
       {session.status === "playing" ? (
         <GameHud
           clicks={session.clicks}
@@ -225,22 +238,33 @@ export default function PlayPage() {
         />
       ) : null}
 
-      <div className="mx-auto max-w-7xl px-4 pt-4">
-        <PathTrail path={session.path} />
+      <div className="mx-auto max-w-7xl px-4 pt-5">
+        <div className="border-3 border-black bg-[#fffdf7] p-3 shadow-[4px_4px_0_#000]">
+          <p className="mb-2 font-[family-name:var(--font-mono)] text-[9px] font-black uppercase tracking-[0.2em]">
+            Current route
+          </p>
+          <PathTrail path={session.path} />
+        </div>
       </div>
 
       {error ? (
-        <p className="mx-auto max-w-7xl px-4 py-8 text-[var(--accent)]">{error}</p>
+        <p className="mx-auto mt-5 max-w-7xl border-4 border-black bg-[#ef4438] px-4 py-4 font-[family-name:var(--font-mono)] text-xs font-black shadow-[5px_5px_0_#000]">{error}</p>
       ) : null}
 
       {loading ? (
-        <p className="mx-auto max-w-7xl px-4 py-16 text-[var(--muted-fg)]">
-          Loading page…
-        </p>
+        <div className="mx-auto max-w-7xl px-4 py-16">
+          <p className="inline-block border-4 border-black bg-[#ffd52e] px-5 py-3 font-[family-name:var(--font-mono)] text-xs font-black uppercase shadow-[5px_5px_0_#000]">
+            Loading page…
+          </p>
+        </div>
       ) : null}
 
       {!loading && titlePage && session.current.kind === "title" ? (
-        <TitleView page={titlePage} onSelectPerson={selectPerson} />
+        <TitleView
+          page={titlePage}
+          onSelectPerson={selectPerson}
+          opening={opening}
+        />
       ) : null}
 
       {!loading && personPage && session.current.kind === "person" ? (

@@ -191,13 +191,9 @@ export function parseChallengeSettings(input: unknown): ChallengeSettings {
             ? Number(e.yearTo)
             : fallback.yearTo,
       minRating: Math.min(9, Math.max(0, Number(e.minRating) || 0)),
-      language: typeof e.language === "string" ? e.language : fallback.language,
-      genreId:
-        e.genreId === null || e.genreId === undefined
-          ? null
-          : Number.isFinite(Number(e.genreId))
-            ? Number(e.genreId)
-            : fallback.genreId,
+      // These filters are intentionally not part of the round setup UI.
+      language: "any",
+      genreId: null,
     };
   };
 

@@ -43,9 +43,9 @@ export function PageSearch({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         autoComplete="off"
-        className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-4 py-2.5 text-sm shadow-sm outline-none transition placeholder:text-[var(--muted-fg)] focus:border-[var(--accent)]"
+        className="w-full border-3 border-black bg-[#fffdf7] px-4 py-3 font-[family-name:var(--font-mono)] text-xs font-bold outline-none transition placeholder:text-[#6b645a] focus:bg-[#ffd52e] focus:shadow-[4px_4px_0_#000]"
       />
-      <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded border border-[var(--border)] px-1.5 py-0.5 text-[10px] text-[var(--muted-fg)] sm:inline">
+      <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 border-2 border-black bg-black px-1.5 py-0.5 font-[family-name:var(--font-mono)] text-[10px] font-black text-white sm:inline">
         /
       </kbd>
     </div>

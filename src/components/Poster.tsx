@@ -12,7 +12,7 @@ export function Poster({ path, alt, kind = "poster", className = "" }: Props) {
   if (!src) {
     return (
       <div
-        className={`flex items-center justify-center bg-[var(--muted)] text-[var(--muted-fg)] text-xs tracking-wide ${className}`}
+        className={`flex items-center justify-center bg-[#d8d1c4] font-[family-name:var(--font-mono)] text-[10px] font-black uppercase tracking-wide text-black ${className}`}
         aria-label={alt}
       >
         No image

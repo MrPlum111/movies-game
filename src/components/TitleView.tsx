@@ -8,6 +8,7 @@ import type { PersonOnTitle, TitlePage } from "@/lib/types";
 type Props = {
   page: TitlePage;
   onSelectPerson: (person: PersonOnTitle) => void;
+  opening?: boolean;
 };
 
 function PersonRow({
@@ -26,19 +27,19 @@ function PersonRow({
     <button
       type="button"
       onClick={onSelect}
-      className="group flex w-full items-center gap-3 rounded-lg border border-transparent px-2 py-2 text-left transition hover:border-[var(--border)] hover:bg-[var(--muted)]"
+      className="group flex w-full items-center gap-3 border-2 border-black bg-[#fffdf7] p-2 text-left shadow-[3px_3px_0_#000] transition hover:-translate-y-0.5 hover:bg-[#ffd52e] hover:shadow-[4px_4px_0_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
     >
       <Poster
         path={person.profilePath}
         alt={person.name}
         kind="profile"
-        className="h-11 w-11 shrink-0 rounded-full"
+        className="h-11 w-11 shrink-0 border-2 border-black"
       />
       <span className="min-w-0">
-        <span className="block truncate font-medium group-hover:text-[var(--accent)]">
+        <span className="block truncate font-[family-name:var(--font-mono)] text-xs font-black uppercase">
           {person.name}
         </span>
-        <span className="block truncate text-xs capitalize text-[var(--muted-fg)]">
+        <span className="block truncate font-[family-name:var(--font-mono)] text-[10px] capitalize text-[#6b645a]">
           {roleNote}
         </span>
       </span>
@@ -46,7 +47,7 @@ function PersonRow({
   );
 }
 
-export function TitleView({ page, onSelectPerson }: Props) {
+export function TitleView({ page, onSelectPerson, opening = false }: Props) {
   const [query, setQuery] = useState("");
 
   const cast = useMemo(
@@ -74,28 +75,32 @@ export function TitleView({ page, onSelectPerson }: Props) {
   }, [page.crew, query]);
 
   return (
-    <article className="animate-fade-up mx-auto max-w-7xl px-4 py-6">
-      <div className="grid gap-6 md:grid-cols-[160px_1fr]">
-        <Poster
-          path={page.posterPath}
-          alt={page.title}
-          className="mx-auto aspect-[2/3] w-full max-w-[160px] rounded-md shadow-[var(--shadow)] md:mx-0"
-        />
-        <div className="min-w-0">
-          <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--muted-fg)]">
+    <article
+      className={`${opening ? "launch-page-enter" : "animate-fade-up"} mx-auto max-w-7xl px-4 py-6`}
+    >
+      <div className="grid gap-6 border-4 border-black bg-[#fffdf7] p-5 shadow-[7px_7px_0_#000] md:grid-cols-[180px_1fr]">
+        <div className={opening ? "launch-page-poster" : ""}>
+          <Poster
+            path={page.posterPath}
+            alt={page.title}
+            className="mx-auto aspect-[2/3] w-full max-w-[180px] border-3 border-black md:mx-0"
+          />
+        </div>
+        <div className={`min-w-0 ${opening ? "launch-page-info" : ""}`}>
+          <p className="inline-block bg-black px-3 py-1 font-[family-name:var(--font-mono)] text-[10px] font-black uppercase tracking-[0.2em] text-white">
             {page.mediaType === "tv" ? "TV series" : "Movie"}
           </p>
-          <h1 className="mt-1 font-[family-name:var(--font-display)] text-3xl leading-tight md:text-4xl">
+          <h1 className="mt-3 font-[family-name:var(--font-display)] text-3xl font-black uppercase leading-[0.95] tracking-tight md:text-5xl">
             {page.title}
             {page.year ? (
-              <span className="text-[var(--muted-fg)]"> ({page.year})</span>
+              <span className="text-[#ef4438]"> ({page.year})</span>
             ) : null}
           </h1>
           {page.genres.length > 0 ? (
-            <p className="mt-2 text-sm text-[var(--muted-fg)]">{page.genres.join(" · ")}</p>
+            <p className="mt-3 font-[family-name:var(--font-mono)] text-xs font-bold uppercase text-[#6657e8]">{page.genres.join(" · ")}</p>
           ) : null}
           {page.overview ? (
-            <p className="mt-3 max-w-3xl text-[15px] leading-relaxed text-[var(--fg)]/85 line-clamp-4">
+            <p className="mt-3 max-w-3xl border-l-4 border-[#ffd52e] pl-3 text-[15px] font-medium leading-relaxed line-clamp-4">
               {page.overview}
             </p>
           ) : null}
@@ -109,16 +114,20 @@ export function TitleView({ page, onSelectPerson }: Props) {
         </div>
       </div>
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-2 lg:items-start">
-        <section className="min-w-0">
-          <div className="sticky top-[4.5rem] z-10 -mx-1 mb-3 flex items-baseline justify-between bg-[var(--bg)]/90 px-1 py-2 backdrop-blur-sm">
-            <h2 className="font-[family-name:var(--font-display)] text-2xl">Cast</h2>
-            <span className="text-xs text-[var(--muted-fg)]">{cast.length}</span>
+      <div
+        className={`mt-8 grid gap-8 lg:grid-cols-2 lg:items-start ${
+          opening ? "launch-page-lists" : ""
+        }`}
+      >
+        <section className="min-w-0 border-4 border-black bg-[#fffdf7] shadow-[6px_6px_0_#000]">
+          <div className="sticky top-[4.5rem] z-10 flex items-baseline justify-between border-b-4 border-black bg-[#6657e8] px-4 py-3 text-white">
+            <h2 className="font-[family-name:var(--font-display)] text-2xl font-black uppercase">Cast</h2>
+            <span className="font-[family-name:var(--font-mono)] text-xs font-black">{cast.length}</span>
           </div>
           {cast.length === 0 ? (
-            <p className="text-sm text-[var(--muted-fg)]">No cast matches.</p>
+            <p className="p-4 font-[family-name:var(--font-mono)] text-xs">No cast matches.</p>
           ) : (
-            <div className="grid grid-cols-1 gap-0.5 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2">
               {cast.map((person) => (
                 <PersonRow
                   key={`cast-${person.id}`}
@@ -130,22 +139,23 @@ export function TitleView({ page, onSelectPerson }: Props) {
           )}
         </section>
 
-        <section className="min-w-0 lg:border-l lg:border-[var(--border)] lg:pl-8">
-          <div className="sticky top-[4.5rem] z-10 -mx-1 mb-3 flex items-baseline justify-between bg-[var(--bg)]/90 px-1 py-2 backdrop-blur-sm">
-            <h2 className="font-[family-name:var(--font-display)] text-2xl">Crew</h2>
-            <span className="text-xs text-[var(--muted-fg)]">
+        <section className="min-w-0 border-4 border-black bg-[#fffdf7] shadow-[6px_6px_0_#000]">
+          <div className="sticky top-[4.5rem] z-10 flex items-baseline justify-between border-b-4 border-black bg-[#ef4438] px-4 py-3">
+            <h2 className="font-[family-name:var(--font-display)] text-2xl font-black uppercase">Crew</h2>
+            <span className="font-[family-name:var(--font-mono)] text-xs font-black">
               {crewSections.reduce((n, s) => n + s.people.length, 0)}
             </span>
           </div>
           {crewSections.length === 0 ? (
-            <p className="text-sm text-[var(--muted-fg)]">No crew matches.</p>
+            <p className="p-4 font-[family-name:var(--font-mono)] text-xs">No crew matches.</p>
           ) : (
-            crewSections.map(({ label, people }) => (
-              <div key={label} className="mb-6">
-                <h3 className="text-xs uppercase tracking-[0.18em] text-[var(--muted-fg)]">
+            <div className="p-4">
+            {crewSections.map(({ label, people }) => (
+              <div key={label} className="mb-6 last:mb-0">
+                <h3 className="mb-3 inline-block border-2 border-black bg-[#ffd52e] px-2 py-1 font-[family-name:var(--font-mono)] text-[10px] font-black uppercase tracking-[0.18em]">
                   {label}
                 </h3>
-                <div className="mt-2 grid grid-cols-1 gap-0.5 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {people.map((person) => (
                     <PersonRow
                       key={`${label}-${person.id}`}
@@ -155,7 +165,8 @@ export function TitleView({ page, onSelectPerson }: Props) {
                   ))}
                 </div>
               </div>
-            ))
+            ))}
+            </div>
           )}
         </section>
       </div>

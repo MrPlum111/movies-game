@@ -56,28 +56,30 @@ export function ResultPanel({
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/40 p-4 sm:items-center">
-      <div className="animate-fade-up max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--bg)] p-6 shadow-[var(--shadow-lg)]">
-        <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--muted-fg)]">
-          {status === "won" ? "Finished" : "Gave up"}
-        </p>
-        <h2 className="mt-1 font-[family-name:var(--font-display)] text-3xl">
-          {status === "won" ? "You made it" : "Run ended"}
-        </h2>
+    <div className="nb-dot-grid fixed inset-0 z-40 flex items-end justify-center bg-black/70 p-4 sm:items-center">
+      <div className="animate-fade-up max-h-[90vh] w-full max-w-xl overflow-y-auto border-4 border-black bg-[#fffdf7] shadow-[10px_10px_0_#000]">
+        <div className={`border-b-4 border-black p-5 ${status === "won" ? "bg-[#36ad72]" : "bg-[#ef4438]"}`}>
+          <p className="font-[family-name:var(--font-mono)] text-[10px] font-black uppercase tracking-[0.2em]">
+            {status === "won" ? "Run complete" : "Run terminated"}
+          </p>
+          <h2 className="mt-1 font-[family-name:var(--font-display)] text-4xl font-black uppercase leading-none">
+            {status === "won" ? "You made it!" : "Run ended"}
+          </h2>
+        </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-3 font-[family-name:var(--font-mono)] text-sm">
-          <div className="rounded-lg bg-[var(--muted)] p-3">
-            <p className="text-[var(--muted-fg)]">Your clicks</p>
-            <p className="text-2xl font-semibold">{clicks}</p>
+        <div className="grid grid-cols-2 border-b-4 border-black font-[family-name:var(--font-mono)] text-sm">
+          <div className="border-r-4 border-black bg-[#ffd52e] p-4">
+            <p className="text-[10px] font-black uppercase">Your clicks</p>
+            <p className="text-3xl font-black">{clicks}</p>
           </div>
-          <div className="rounded-lg bg-[var(--muted)] p-3">
-            <p className="text-[var(--muted-fg)]">Your time</p>
-            <p className="text-2xl font-semibold tabular-nums">{formatTime(timeMs)}</p>
+          <div className="bg-[#6657e8] p-4 text-white">
+            <p className="text-[10px] font-black uppercase">Your time</p>
+            <p className="text-3xl font-black tabular-nums">{formatTime(timeMs)}</p>
           </div>
         </div>
 
-        <div className="mt-5">
-          <p className="text-xs uppercase tracking-[0.16em] text-[var(--muted-fg)]">
+        <div className="border-b-3 border-black p-5">
+          <p className="font-[family-name:var(--font-mono)] text-[10px] font-black uppercase tracking-[0.16em]">
             Your path
           </p>
           <div className="mt-2">
@@ -85,8 +87,8 @@ export function ResultPanel({
           </div>
         </div>
 
-        <div className="mt-5">
-          <p className="text-xs uppercase tracking-[0.16em] text-[var(--muted-fg)]">
+        <div className="border-b-3 border-black p-5">
+          <p className="font-[family-name:var(--font-mono)] text-[10px] font-black uppercase tracking-[0.16em]">
             Shortest known · {shortestClicks} clicks
           </p>
           <div className="mt-2">
@@ -95,8 +97,8 @@ export function ResultPanel({
         </div>
 
         {status === "won" ? (
-          <div className="mt-6 space-y-2">
-            <label className="block text-sm text-[var(--muted-fg)]" htmlFor="name">
+          <div className="space-y-2 border-b-3 border-black bg-[#f4f0e8] p-5">
+            <label className="block font-[family-name:var(--font-mono)] text-[10px] font-black uppercase" htmlFor="name">
               Name for leaderboard
             </label>
             <div className="flex gap-2">
@@ -107,13 +109,13 @@ export function ResultPanel({
                 maxLength={24}
                 placeholder="Anonymous"
                 disabled={saved}
-                className="min-w-0 flex-1 rounded-md border border-[var(--border)] bg-transparent px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+                className="min-w-0 flex-1 border-3 border-black bg-[#fffdf7] px-3 py-2 font-[family-name:var(--font-mono)] text-sm outline-none focus:bg-[#ffd52e]"
               />
               <button
                 type="button"
                 onClick={submitScore}
                 disabled={saving || saved}
-                className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--accent-fg)] disabled:opacity-50"
+                className="border-3 border-black bg-[#36ad72] px-4 py-2 font-[family-name:var(--font-mono)] text-[10px] font-black uppercase shadow-[3px_3px_0_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:opacity-50"
               >
                 {saved ? "Saved" : saving ? "Saving…" : "Submit"}
               </button>
@@ -121,21 +123,21 @@ export function ResultPanel({
           </div>
         ) : null}
 
-        <div className="mt-6 flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-3 p-5">
           <button
             type="button"
             onClick={onPlayAgain}
-            className="rounded-md bg-[var(--fg)] px-4 py-2 text-sm font-medium text-[var(--bg)]"
+            className="border-3 border-black bg-black px-4 py-2 font-[family-name:var(--font-mono)] text-[10px] font-black uppercase text-white shadow-[3px_3px_0_#6657e8]"
           >
             Play again
           </button>
           <Link
             href="/leaderboard"
-            className="rounded-md border border-[var(--border)] px-4 py-2 text-sm"
+            className="border-3 border-black bg-[#ffd52e] px-4 py-2 font-[family-name:var(--font-mono)] text-[10px] font-black uppercase shadow-[3px_3px_0_#000]"
           >
             Leaderboard
           </Link>
-          <Link href="/" className="rounded-md px-4 py-2 text-sm text-[var(--muted-fg)]">
+          <Link href="/" className="border-3 border-black bg-[#fffdf7] px-4 py-2 font-[family-name:var(--font-mono)] text-[10px] font-black uppercase">
             Home
           </Link>
         </div>

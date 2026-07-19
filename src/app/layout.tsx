@@ -19,9 +19,8 @@ const mono = Space_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MoviesGame — Film graph speedrun",
-  description:
-    "Race from one movie to another through actors, directors, writers, and producers.",
+  title: "Reel Speedruns",
+  description: "Connect the movies through cast and crew.",
 };
 
 export default function RootLayout({

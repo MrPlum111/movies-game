@@ -26,21 +26,21 @@ function TitleRow({
     <button
       type="button"
       onClick={onSelect}
-      className="group flex w-full items-center gap-3 rounded-lg border border-transparent px-2 py-2 text-left transition hover:border-[var(--border)] hover:bg-[var(--muted)]"
+      className="group flex w-full items-center gap-3 border-2 border-black bg-[#fffdf7] p-2 text-left shadow-[3px_3px_0_#000] transition hover:-translate-y-0.5 hover:bg-[#ffd52e] hover:shadow-[4px_4px_0_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
     >
       <Poster
         path={title.posterPath}
         alt={title.title}
-        className="h-14 w-10 shrink-0 rounded-sm"
+        className="h-14 w-10 shrink-0 border-2 border-black"
       />
       <span className="min-w-0">
-        <span className="block truncate font-medium group-hover:text-[var(--accent)]">
+        <span className="block truncate font-[family-name:var(--font-mono)] text-xs font-black uppercase">
           {title.title}
           {title.year ? (
-            <span className="text-[var(--muted-fg)]"> ({title.year})</span>
+            <span className="text-[#ef4438]"> ({title.year})</span>
           ) : null}
         </span>
-        <span className="block truncate text-xs capitalize text-[var(--muted-fg)]">
+        <span className="block truncate font-[family-name:var(--font-mono)] text-[10px] capitalize text-[#6b645a]">
           {title.mediaType === "tv" ? "TV · " : ""}
           {roleNote}
         </span>
@@ -85,27 +85,27 @@ export function PersonView({ page, onSelectTitle }: Props) {
 
   return (
     <article className="animate-fade-up mx-auto max-w-7xl px-4 py-6">
-      <div className="flex flex-col items-start gap-5 sm:flex-row">
+      <div className="flex flex-col items-start gap-5 border-4 border-black bg-[#fffdf7] p-5 shadow-[7px_7px_0_#000] sm:flex-row">
         <Poster
           path={page.profilePath}
           alt={page.name}
           kind="profile"
-          className="h-32 w-32 shrink-0 rounded-full shadow-[var(--shadow)]"
+          className="h-36 w-36 shrink-0 border-4 border-black bg-[#6657e8]"
         />
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--muted-fg)]">
+          <p className="inline-block bg-black px-3 py-1 font-[family-name:var(--font-mono)] text-[10px] font-black uppercase tracking-[0.2em] text-white">
             Person
           </p>
-          <h1 className="mt-1 font-[family-name:var(--font-display)] text-3xl md:text-4xl">
+          <h1 className="mt-3 font-[family-name:var(--font-display)] text-3xl font-black uppercase leading-none tracking-tight md:text-5xl">
             {page.name}
           </h1>
           {page.knownForDepartment ? (
-            <p className="mt-2 text-sm text-[var(--muted-fg)]">
+            <p className="mt-3 font-[family-name:var(--font-mono)] text-xs font-black uppercase text-[#6657e8]">
               Known for {page.knownForDepartment}
             </p>
           ) : null}
           {page.biography ? (
-            <p className="mt-3 max-w-3xl text-[15px] leading-relaxed text-[var(--fg)]/85 line-clamp-4">
+            <p className="mt-3 max-w-3xl border-l-4 border-[#ffd52e] pl-3 text-[15px] font-medium leading-relaxed line-clamp-4">
               {page.biography}
             </p>
           ) : null}
@@ -120,15 +120,15 @@ export function PersonView({ page, onSelectTitle }: Props) {
       </div>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-2 lg:items-start">
-        <section className="min-w-0">
-          <div className="sticky top-[4.5rem] z-10 -mx-1 mb-3 flex items-baseline justify-between bg-[var(--bg)]/90 px-1 py-2 backdrop-blur-sm">
-            <h2 className="font-[family-name:var(--font-display)] text-2xl">Cast</h2>
-            <span className="text-xs text-[var(--muted-fg)]">{cast.length}</span>
+        <section className="min-w-0 border-4 border-black bg-[#fffdf7] shadow-[6px_6px_0_#000]">
+          <div className="sticky top-[4.5rem] z-10 flex items-baseline justify-between border-b-4 border-black bg-[#6657e8] px-4 py-3 text-white">
+            <h2 className="font-[family-name:var(--font-display)] text-2xl font-black uppercase">Acting credits</h2>
+            <span className="font-[family-name:var(--font-mono)] text-xs font-black">{cast.length}</span>
           </div>
           {cast.length === 0 ? (
-            <p className="text-sm text-[var(--muted-fg)]">No cast credits match.</p>
+            <p className="p-4 font-[family-name:var(--font-mono)] text-xs">No acting credits match.</p>
           ) : (
-            <div className="grid grid-cols-1 gap-0.5 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2">
               {cast.map((title) => (
                 <TitleRow
                   key={`cast-${title.mediaType}-${title.id}`}
@@ -140,22 +140,23 @@ export function PersonView({ page, onSelectTitle }: Props) {
           )}
         </section>
 
-        <section className="min-w-0 lg:border-l lg:border-[var(--border)] lg:pl-8">
-          <div className="sticky top-[4.5rem] z-10 -mx-1 mb-3 flex items-baseline justify-between bg-[var(--bg)]/90 px-1 py-2 backdrop-blur-sm">
-            <h2 className="font-[family-name:var(--font-display)] text-2xl">Crew</h2>
-            <span className="text-xs text-[var(--muted-fg)]">
+        <section className="min-w-0 border-4 border-black bg-[#fffdf7] shadow-[6px_6px_0_#000]">
+          <div className="sticky top-[4.5rem] z-10 flex items-baseline justify-between border-b-4 border-black bg-[#ef4438] px-4 py-3">
+            <h2 className="font-[family-name:var(--font-display)] text-2xl font-black uppercase">Crew credits</h2>
+            <span className="font-[family-name:var(--font-mono)] text-xs font-black">
               {crewSections.reduce((n, s) => n + s.titles.length, 0)}
             </span>
           </div>
           {crewSections.length === 0 ? (
-            <p className="text-sm text-[var(--muted-fg)]">No crew credits match.</p>
+            <p className="p-4 font-[family-name:var(--font-mono)] text-xs">No crew credits match.</p>
           ) : (
-            crewSections.map(({ label, titles }) => (
-              <div key={label} className="mb-6">
-                <h3 className="text-xs uppercase tracking-[0.18em] text-[var(--muted-fg)]">
+            <div className="p-4">
+            {crewSections.map(({ label, titles }) => (
+              <div key={label} className="mb-6 last:mb-0">
+                <h3 className="mb-3 inline-block border-2 border-black bg-[#ffd52e] px-2 py-1 font-[family-name:var(--font-mono)] text-[10px] font-black uppercase tracking-[0.18em]">
                   {label}
                 </h3>
-                <div className="mt-2 grid grid-cols-1 gap-0.5 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {titles.map((title) => (
                     <TitleRow
                       key={`${label}-${title.mediaType}-${title.id}`}
@@ -165,7 +166,8 @@ export function PersonView({ page, onSelectTitle }: Props) {
                   ))}
                 </div>
               </div>
-            ))
+            ))}
+            </div>
           )}
         </section>
       </div>
