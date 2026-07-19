@@ -1,65 +1,170 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { EndpointSettingsPanel } from "@/components/EndpointSettingsPanel";
+import {
+  defaultChallengeSettings,
+  difficultyLabel,
+  parseChallengeSettings,
+  type ChallengeSettings,
+  type Difficulty,
+} from "@/lib/challenge-settings";
+import { createSession, saveSession } from "@/lib/game-session";
+
+const SETTINGS_KEY = "moviesgame:settings";
+
+export default function HomePage() {
+  const router = useRouter();
+  const [settings, setSettings] = useState<ChallengeSettings>(defaultChallengeSettings);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(SETTINGS_KEY);
+      if (raw) {
+        setSettings(parseChallengeSettings(JSON.parse(raw)));
+      }
+    } catch {
+      /* ignore */
+    }
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  }, [settings, hydrated]);
+
+  async function startClassic() {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/challenge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(settings),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not generate challenge");
+      const session = createSession(data);
+      saveSession(session);
+      router.push("/play");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong");
+      setLoading(false);
+    }
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+    <main className="relative min-h-screen overflow-hidden">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(196,74,54,0.12),_transparent_55%),linear-gradient(180deg,#f3efe6_0%,#e8e2d6_45%,#ddd5c6_100%)]" />
+      <div className="pointer-events-none absolute inset-0 opacity-[0.07] [background-image:repeating-linear-gradient(90deg,transparent,transparent_11px,#1a1714_11px,#1a1714_12px)]" />
+
+      <div className="relative mx-auto max-w-6xl px-4 py-12 md:py-16">
+        <p className="text-[11px] uppercase tracking-[0.28em] text-[var(--muted-fg)]">
+          Film graph speedrun
+        </p>
+        <h1 className="mt-3 font-[family-name:var(--font-display)] text-5xl leading-[0.95] tracking-tight md:text-7xl">
+          Movies
+          <span className="text-[var(--accent)]">Game</span>
+        </h1>
+        <p className="mt-4 max-w-2xl text-lg leading-relaxed text-[var(--fg)]/80">
+          Start on one title. Reach another. Move only{" "}
+          <span className="font-medium text-[var(--fg)]">Movie → Person → Movie</span>.
+          Tune how hard the path is, and shape the start and finish separately.
+        </p>
+
+        <section className="mt-10 rounded-xl border border-[var(--border)] bg-[var(--bg)]/70 p-4 backdrop-blur-sm md:p-5">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <label className="text-xs uppercase tracking-[0.14em] text-[var(--muted-fg)]">
+                Difficulty
+              </label>
+              <p className="mt-1 font-[family-name:var(--font-display)] text-xl">
+                {difficultyLabel(settings.difficulty)}
+              </p>
+            </div>
+            <input
+              type="range"
+              min={1}
+              max={5}
+              step={1}
+              value={settings.difficulty}
+              onChange={(e) =>
+                setSettings((s) => ({
+                  ...s,
+                  difficulty: Number(e.target.value) as Difficulty,
+                }))
+              }
+              className="w-full max-w-md accent-[var(--accent)]"
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+          </div>
+          <label className="mt-5 flex cursor-pointer items-center gap-3 text-sm">
+            <input
+              type="checkbox"
+              checked={settings.includeTv}
+              onChange={(e) =>
+                setSettings((s) => ({ ...s, includeTv: e.target.checked }))
+              }
+              className="size-4 accent-[var(--accent)]"
+            />
+            Include TV series as title nodes
+          </label>
+        </section>
+
+        <div className="mt-6 grid gap-4 lg:grid-cols-2">
+          <EndpointSettingsPanel
+            title="Start title"
+            subtitle="Where your run begins"
+            value={settings.start}
+            onChange={(start) => setSettings((s) => ({ ...s, start }))}
+          />
+          <EndpointSettingsPanel
+            title="End title"
+            subtitle="The target you must reach"
+            value={settings.end}
+            onChange={(end) => setSettings((s) => ({ ...s, end }))}
+          />
         </div>
-      </main>
-    </div>
+
+        <div className="mt-8 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => void startClassic()}
+            disabled={loading}
+            className="rounded-md bg-[var(--fg)] px-5 py-3 text-sm font-semibold text-[var(--bg)] transition hover:bg-[var(--accent)] disabled:opacity-60"
+          >
+            {loading ? "Finding a route…" : "Play classic"}
+          </button>
+          <Link
+            href="/leaderboard"
+            className="rounded-md border border-[var(--border)] bg-[var(--bg)]/50 px-5 py-3 text-sm backdrop-blur-sm"
+          >
+            Leaderboard
+          </Link>
+          <button
+            type="button"
+            onClick={() => setSettings(defaultChallengeSettings())}
+            className="px-3 py-3 text-sm text-[var(--muted-fg)] hover:text-[var(--fg)]"
+          >
+            Reset settings
+          </button>
+        </div>
+
+        {error ? (
+          <p className="mt-4 text-sm text-[var(--accent)]" role="alert">
+            {error}
+          </p>
+        ) : null}
+
+        <p className="mt-10 text-xs text-[var(--muted-fg)]">
+          This product uses the TMDB API but is not endorsed or certified by TMDB.
+        </p>
+      </div>
+    </main>
   );
 }
