@@ -4,7 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { PathTrail } from "@/components/PathTrail";
 import { formatTime } from "@/lib/format";
-import type { PathNode } from "@/lib/types";
+import {
+  absoluteShareUrl,
+  encodeSharedChallenge,
+} from "@/lib/share-challenge";
+import type { PathNode, TitleRef } from "@/lib/types";
 
 type Props = {
   status: "won" | "dnf";
@@ -13,8 +17,9 @@ type Props = {
   playerPath: PathNode[];
   shortestClicks: number;
   shortestPath: PathNode[];
-  startTitle: string;
-  targetTitle: string;
+  start: TitleRef;
+  target: TitleRef;
+  includeTv: boolean;
   onPlayAgain: () => void;
 };
 
@@ -25,13 +30,15 @@ export function ResultPanel({
   playerPath,
   shortestClicks,
   shortestPath,
-  startTitle,
-  targetTitle,
+  start,
+  target,
+  includeTv,
   onPlayAgain,
 }: Props) {
   const [name, setName] = useState("");
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   async function submitScore() {
     if (status !== "won" || saved) return;
@@ -44,8 +51,8 @@ export function ResultPanel({
           name,
           clicks,
           timeMs,
-          startTitle,
-          targetTitle,
+          startTitle: start.title,
+          targetTitle: target.title,
           status: "completed",
         }),
       });
@@ -55,10 +62,27 @@ export function ResultPanel({
     }
   }
 
+  async function copyShareLink() {
+    const url = absoluteShareUrl(
+      encodeSharedChallenge(start, target, includeTv),
+    );
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      window.prompt("Copy this challenge link:", url);
+    }
+  }
+
   return (
     <div className="nb-dot-grid fixed inset-0 z-40 flex items-end justify-center bg-black/70 p-4 sm:items-center">
       <div className="animate-fade-up max-h-[90vh] w-full max-w-xl overflow-y-auto border-4 border-black bg-[#fffdf7] shadow-[10px_10px_0_#000]">
-        <div className={`border-b-4 border-black p-5 ${status === "won" ? "bg-[#36ad72]" : "bg-[#ef4438]"}`}>
+        <div
+          className={`border-b-4 border-black p-5 ${
+            status === "won" ? "bg-[#36ad72]" : "bg-[#ef4438]"
+          }`}
+        >
           <p className="font-[family-name:var(--font-mono)] text-[10px] font-black uppercase tracking-[0.2em]">
             {status === "won" ? "Run complete" : "Run terminated"}
           </p>
@@ -74,31 +98,44 @@ export function ResultPanel({
           </div>
           <div className="bg-[#6657e8] p-4 text-white">
             <p className="text-[10px] font-black uppercase">Your time</p>
-            <p className="text-3xl font-black tabular-nums">{formatTime(timeMs)}</p>
+            <p className="text-3xl font-black tabular-nums">
+              {formatTime(timeMs)}
+            </p>
           </div>
         </div>
 
         <div className="border-b-3 border-black p-5">
           <p className="font-[family-name:var(--font-mono)] text-[10px] font-black uppercase tracking-[0.16em]">
-            Your path
+            Your path · tap a name to peek
           </p>
           <div className="mt-2">
-            <PathTrail path={playerPath} />
+            <PathTrail
+              path={playerPath}
+              interactive
+              includeTv={includeTv}
+            />
           </div>
         </div>
 
         <div className="border-b-3 border-black p-5">
           <p className="font-[family-name:var(--font-mono)] text-[10px] font-black uppercase tracking-[0.16em]">
-            Shortest known · {shortestClicks} clicks
+            Shortest known · {shortestClicks} clicks · tap to peek
           </p>
           <div className="mt-2">
-            <PathTrail path={shortestPath} />
+            <PathTrail
+              path={shortestPath}
+              interactive
+              includeTv={includeTv}
+            />
           </div>
         </div>
 
         {status === "won" ? (
           <div className="space-y-2 border-b-3 border-black bg-[#f4f0e8] p-5">
-            <label className="block font-[family-name:var(--font-mono)] text-[10px] font-black uppercase" htmlFor="name">
+            <label
+              className="block font-[family-name:var(--font-mono)] text-[10px] font-black uppercase"
+              htmlFor="name"
+            >
               Name for leaderboard
             </label>
             <div className="flex gap-2">
@@ -131,13 +168,23 @@ export function ResultPanel({
           >
             Play again
           </button>
+          <button
+            type="button"
+            onClick={() => void copyShareLink()}
+            className="border-3 border-black bg-[#9a57dc] px-4 py-2 font-[family-name:var(--font-mono)] text-[10px] font-black uppercase text-white shadow-[3px_3px_0_#000]"
+          >
+            {copied ? "Link copied" : "Share challenge"}
+          </button>
           <Link
             href="/leaderboard"
             className="border-3 border-black bg-[#ffd52e] px-4 py-2 font-[family-name:var(--font-mono)] text-[10px] font-black uppercase shadow-[3px_3px_0_#000]"
           >
             Leaderboard
           </Link>
-          <Link href="/" className="border-3 border-black bg-[#fffdf7] px-4 py-2 font-[family-name:var(--font-mono)] text-[10px] font-black uppercase">
+          <Link
+            href="/"
+            className="border-3 border-black bg-[#fffdf7] px-4 py-2 font-[family-name:var(--font-mono)] text-[10px] font-black uppercase"
+          >
             Home
           </Link>
         </div>

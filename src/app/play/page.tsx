@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ChallengeLaunchSequence } from "@/components/ChallengeLaunchSequence";
 import { GameHud } from "@/components/GameHud";
 import { PathTrail } from "@/components/PathTrail";
 import { PersonView } from "@/components/PersonView";
@@ -14,7 +15,14 @@ import {
   saveSession,
   type GameSession,
 } from "@/lib/game-session";
-import type { PersonOnTitle, PersonPage, TitleOnPerson, TitlePage } from "@/lib/types";
+import { hintForLevel, MAX_HINTS } from "@/lib/hints";
+import type {
+  Challenge,
+  PersonOnTitle,
+  PersonPage,
+  TitleOnPerson,
+  TitlePage,
+} from "@/lib/types";
 
 export default function PlayPage() {
   const router = useRouter();
@@ -25,6 +33,12 @@ export default function PlayPage() {
   const [error, setError] = useState<string | null>(null);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [opening, setOpening] = useState(false);
+  const [launching, setLaunching] = useState(false);
+  const [pendingChallenge, setPendingChallenge] = useState<Challenge | null>(
+    null,
+  );
+  const [hintsUsed, setHintsUsed] = useState(0);
+  const [hintText, setHintText] = useState<string | null>(null);
 
   useEffect(() => {
     if (sessionStorage.getItem("moviesgame:opening") === "1") {
@@ -72,27 +86,26 @@ export default function PlayPage() {
         : `person:${session.current.id}`;
 
   useEffect(() => {
-    if (!session) return;
+    if (!session || launching) return;
     if (session.status === "playing") {
       void loadCurrent(session);
     } else {
       setLoading(false);
     }
-    // Reload only when the current node changes, not on every session field update
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentKey, session?.status, loadCurrent]);
+  }, [currentKey, session?.status, loadCurrent, launching]);
 
   useEffect(() => {
-    if (!session || session.status !== "playing") return;
+    if (!session || session.status !== "playing" || launching) return;
     const tick = () => setElapsedMs(Date.now() - session.startedAt);
     tick();
     const id = window.setInterval(tick, 50);
     return () => window.clearInterval(id);
-  }, [session]);
+  }, [session, launching]);
 
   useEffect(() => {
     if (!opening || !titlePage) return;
-    const timer = window.setTimeout(() => setOpening(false), 1800);
+    const timer = window.setTimeout(() => setOpening(false), 1200);
     return () => window.clearTimeout(timer);
   }, [opening, titlePage]);
 
@@ -169,50 +182,81 @@ export default function PlayPage() {
     });
   }
 
+  function useHint() {
+    if (!session || session.status !== "playing") return;
+    if (hintsUsed >= MAX_HINTS) return;
+
+    const nextLevel = hintsUsed + 1;
+    const text = hintForLevel(session.challenge, nextLevel);
+    setHintsUsed(nextLevel);
+    setHintText(text);
+    commit({
+      ...session,
+      clicks: session.clicks + 1,
+    });
+  }
+
   async function playAgain() {
+    const body =
+      session?.challenge.settings ??
+      ({
+        difficulty: 2,
+        includeTv: session?.challenge.includeTv ?? false,
+        start: {
+          popularity: 4,
+          yearFrom: null,
+          yearTo: null,
+          minRating: 0,
+          language: "any",
+          genreId: null,
+        },
+        end: {
+          popularity: 4,
+          yearFrom: null,
+          yearTo: null,
+          minRating: 0,
+          language: "any",
+          genreId: null,
+        },
+      } as const);
+
     clearSession();
-    setLoading(true);
+    setLaunching(true);
+    setPendingChallenge(null);
+    setError(null);
+    setHintsUsed(0);
+    setHintText(null);
+    setTitlePage(null);
+    setPersonPage(null);
+
     try {
-      const body =
-        session?.challenge.settings ??
-        ({
-          difficulty: 2,
-          includeTv: session?.challenge.includeTv ?? false,
-          start: {
-            popularity: 4,
-            yearFrom: null,
-            yearTo: null,
-            minRating: 0,
-            language: "any",
-            genreId: null,
-          },
-          end: {
-            popularity: 4,
-            yearFrom: null,
-            yearTo: null,
-            minRating: 0,
-            language: "any",
-            genreId: null,
-          },
-        } as const);
       const res = await fetch("/api/challenge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error("Could not start a new challenge");
-      const challenge = await res.json();
-      const next = createSession(challenge);
-      saveSession(next);
-      setSession(next);
-      setElapsedMs(0);
+      const challenge = (await res.json()) as Challenge;
+      setPendingChallenge(challenge);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to restart");
-      setLoading(false);
+      setLaunching(false);
     }
   }
 
-  if (!session) {
+  const finishLaunch = useCallback(() => {
+    if (!pendingChallenge) return;
+    const next = createSession(pendingChallenge);
+    saveSession(next);
+    sessionStorage.setItem("moviesgame:opening", "1");
+    setSession(next);
+    setElapsedMs(0);
+    setOpening(true);
+    setLaunching(false);
+    setPendingChallenge(null);
+  }, [pendingChallenge]);
+
+  if (!session && !launching) {
     return (
       <main className="nb-dot-grid grid min-h-screen place-items-center bg-[#f4f0e8]">
         <p className="border-4 border-black bg-[#ffd52e] px-6 py-4 font-[family-name:var(--font-mono)] text-xs font-black uppercase shadow-[6px_6px_0_#000]">
@@ -223,66 +267,87 @@ export default function PlayPage() {
   }
 
   const finishedMs =
-    session.finishedAt != null
+    session && session.finishedAt != null
       ? session.finishedAt - session.startedAt
       : elapsedMs;
 
   return (
     <main className="nb-dot-grid min-h-screen bg-[#f4f0e8] pb-10 text-black">
-      {session.status === "playing" ? (
+      {launching ? (
+        <ChallengeLaunchSequence
+          challenge={pendingChallenge}
+          onComplete={finishLaunch}
+        />
+      ) : null}
+
+      {session && session.status === "playing" && !launching ? (
         <GameHud
           clicks={session.clicks}
           elapsedMs={elapsedMs}
           target={session.challenge.target}
           onGiveUp={giveUp}
+          onHint={useHint}
+          hintText={hintText}
+          hintsLeft={MAX_HINTS - hintsUsed}
         />
       ) : null}
 
-      <div className="mx-auto max-w-7xl px-4 pt-5">
-        <div className="border-3 border-black bg-[#fffdf7] p-3 shadow-[4px_4px_0_#000]">
-          <p className="mb-2 font-[family-name:var(--font-mono)] text-[9px] font-black uppercase tracking-[0.2em]">
-            Current route
-          </p>
-          <PathTrail path={session.path} />
-        </div>
-      </div>
+      {session && !launching ? (
+        <>
+          <div className="mx-auto max-w-7xl px-4 pt-5">
+            <div className="border-3 border-black bg-[#fffdf7] p-3 shadow-[4px_4px_0_#000]">
+              <p className="mb-2 font-[family-name:var(--font-mono)] text-[9px] font-black uppercase tracking-[0.2em]">
+                Current route
+              </p>
+              <PathTrail
+                path={session.path}
+                interactive={session.status !== "playing"}
+                includeTv={session.challenge.includeTv}
+              />
+            </div>
+          </div>
 
-      {error ? (
-        <p className="mx-auto mt-5 max-w-7xl border-4 border-black bg-[#ef4438] px-4 py-4 font-[family-name:var(--font-mono)] text-xs font-black shadow-[5px_5px_0_#000]">{error}</p>
-      ) : null}
+          {error ? (
+            <p className="mx-auto mt-5 max-w-7xl border-4 border-black bg-[#ef4438] px-4 py-4 font-[family-name:var(--font-mono)] text-xs font-black shadow-[5px_5px_0_#000]">
+              {error}
+            </p>
+          ) : null}
 
-      {loading ? (
-        <div className="mx-auto max-w-7xl px-4 py-16">
-          <p className="inline-block border-4 border-black bg-[#ffd52e] px-5 py-3 font-[family-name:var(--font-mono)] text-xs font-black uppercase shadow-[5px_5px_0_#000]">
-            Loading page…
-          </p>
-        </div>
-      ) : null}
+          {loading ? (
+            <div className="mx-auto max-w-7xl px-4 py-16">
+              <p className="inline-block border-4 border-black bg-[#ffd52e] px-5 py-3 font-[family-name:var(--font-mono)] text-xs font-black uppercase shadow-[5px_5px_0_#000]">
+                Loading page…
+              </p>
+            </div>
+          ) : null}
 
-      {!loading && titlePage && session.current.kind === "title" ? (
-        <TitleView
-          page={titlePage}
-          onSelectPerson={selectPerson}
-          opening={opening}
-        />
-      ) : null}
+          {!loading && titlePage && session.current.kind === "title" ? (
+            <TitleView
+              page={titlePage}
+              onSelectPerson={selectPerson}
+              opening={opening}
+            />
+          ) : null}
 
-      {!loading && personPage && session.current.kind === "person" ? (
-        <PersonView page={personPage} onSelectTitle={selectTitle} />
-      ) : null}
+          {!loading && personPage && session.current.kind === "person" ? (
+            <PersonView page={personPage} onSelectTitle={selectTitle} />
+          ) : null}
 
-      {session.status !== "playing" ? (
-        <ResultPanel
-          status={session.status}
-          clicks={session.clicks}
-          timeMs={finishedMs}
-          playerPath={session.path}
-          shortestClicks={session.challenge.shortestClicks}
-          shortestPath={session.challenge.shortestPath}
-          startTitle={session.challenge.start.title}
-          targetTitle={session.challenge.target.title}
-          onPlayAgain={() => void playAgain()}
-        />
+          {session.status !== "playing" ? (
+            <ResultPanel
+              status={session.status}
+              clicks={session.clicks}
+              timeMs={finishedMs}
+              playerPath={session.path}
+              shortestClicks={session.challenge.shortestClicks}
+              shortestPath={session.challenge.shortestPath}
+              start={session.challenge.start}
+              target={session.challenge.target}
+              includeTv={session.challenge.includeTv}
+              onPlayAgain={() => void playAgain()}
+            />
+          ) : null}
+        </>
       ) : null}
     </main>
   );

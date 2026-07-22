@@ -3,7 +3,7 @@ import {
   matchesEndpoint,
   type ChallengeSettings,
 } from "./challenge-settings";
-import { sharesPeople } from "./graph";
+import { findShortestPath, sharesPeople } from "./graph";
 import {
   fetchTitlePool,
   getPersonName,
@@ -12,7 +12,7 @@ import {
   parseTitleKey,
   titleKey,
 } from "./tmdb";
-import type { Challenge, PathNode, TitleRef } from "./types";
+import type { Challenge, MediaType, PathNode, TitleRef } from "./types";
 
 function shuffle<T>(items: T[]): T[] {
   const arr = [...items];
@@ -221,4 +221,38 @@ export async function generateClassicChallenge(
   }
 
   throw new Error(lastError);
+}
+
+/** Rebuild a challenge for a fixed start/target pair (shareable links). */
+export async function buildChallengeFromEndpoints(input: {
+  start: { mediaType: MediaType; id: number };
+  target: { mediaType: MediaType; id: number };
+  includeTv: boolean;
+}): Promise<Challenge> {
+  const startMeta = await getTitlePersonIds(input.start.mediaType, input.start.id);
+  const targetMeta = await getTitlePersonIds(
+    input.target.mediaType,
+    input.target.id,
+  );
+  if (!startMeta || !targetMeta) {
+    throw new Error("Could not load one of the shared titles");
+  }
+
+  const result = await findShortestPath(
+    input.start,
+    input.target,
+    input.includeTv,
+    12,
+  );
+  if (!result) {
+    throw new Error("No path found between these titles");
+  }
+
+  return {
+    start: startMeta.title,
+    target: targetMeta.title,
+    includeTv: input.includeTv,
+    shortestClicks: result.clicks,
+    shortestPath: result.path,
+  };
 }

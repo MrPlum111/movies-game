@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChallengeLaunchSequence } from "@/components/ChallengeLaunchSequence";
@@ -13,12 +13,14 @@ import {
   type PopularityTier,
 } from "@/lib/challenge-settings";
 import { createSession, saveSession } from "@/lib/game-session";
+import { parseSharedChallenge } from "@/lib/share-challenge";
 import type { Challenge } from "@/lib/types";
 
 const SETTINGS_KEY = "moviesgame:settings";
 
 export default function HomePage() {
   const router = useRouter();
+  const sharedBootstrapped = useRef(false);
   const [settings, setSettings] = useState<ChallengeSettings>(defaultChallengeSettings);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +45,7 @@ export default function HomePage() {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   }, [settings, hydrated]);
 
-  async function startClassic() {
+  const startFromBody = useCallback(async (body: unknown) => {
     setLoading(true);
     setError(null);
     setPendingChallenge(null);
@@ -51,7 +53,7 @@ export default function HomePage() {
       const res = await fetch("/api/challenge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(settings),
+        body: JSON.stringify(body),
       });
       const data = (await res.json()) as Challenge & { error?: string };
       if (!res.ok) throw new Error(data.error || "Could not generate challenge");
@@ -60,6 +62,24 @@ export default function HomePage() {
       setError(e instanceof Error ? e.message : "Something went wrong");
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated || sharedBootstrapped.current) return;
+    const shared = parseSharedChallenge(
+      new URLSearchParams(window.location.search),
+    );
+    if (!shared) return;
+    sharedBootstrapped.current = true;
+    void startFromBody({
+      startRef: shared.start,
+      targetRef: shared.target,
+      includeTv: shared.includeTv,
+    });
+  }, [hydrated, startFromBody]);
+
+  async function startClassic() {
+    await startFromBody(settings);
   }
 
   const finishLaunch = useCallback(() => {

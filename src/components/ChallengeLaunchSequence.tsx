@@ -47,21 +47,23 @@ export function ChallengeLaunchSequence({ challenge, onComplete }: Props) {
   useEffect(() => {
     if (!challenge) return;
 
+    completed.current = false;
     setPhase("randomizing");
+    // Keep both titles visible under the countdown so players can study them.
     const timers = [
-      window.setTimeout(() => setPhase("locked"), 700),
+      window.setTimeout(() => setPhase("locked"), 550),
       window.setTimeout(() => {
         setCountdown(3);
         setPhase("countdown");
-      }, 1050),
-      window.setTimeout(() => setCountdown(2), 1550),
-      window.setTimeout(() => setCountdown(1), 2050),
-      window.setTimeout(() => setPhase("go"), 2550),
+      }, 1200),
+      window.setTimeout(() => setCountdown(2), 1900),
+      window.setTimeout(() => setCountdown(1), 2600),
+      window.setTimeout(() => setPhase("go"), 3300),
       window.setTimeout(() => {
         if (completed.current) return;
         completed.current = true;
         onComplete();
-      }, 2850),
+      }, 3700),
     ];
 
     return () => timers.forEach(window.clearTimeout);
@@ -165,15 +167,15 @@ export function ChallengeLaunchSequence({ challenge, onComplete }: Props) {
       </div>
 
       {showCountdown ? (
-        <div className="absolute inset-0 z-10 grid place-items-center bg-black">
+        <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center bg-black/40 backdrop-blur-[1px]">
           <div
             key={phase === "go" ? "go" : countdown}
-            className="launch-countdown text-center"
+            className="launch-countdown text-center drop-shadow-[6px_6px_0_#000]"
           >
             <p className="font-[family-name:var(--font-mono)] text-sm font-black uppercase tracking-[0.3em] text-[#ffd52e]">
-              {phase === "go" ? "Go" : "Starting in"}
+              {phase === "go" ? "Go" : "Study the match · Starting in"}
             </p>
-            <p className="font-[family-name:var(--font-display)] text-[8rem] font-black leading-none text-white sm:text-[14rem]">
+            <p className="font-[family-name:var(--font-display)] text-[8rem] font-black leading-none text-white sm:text-[12rem]">
               {phase === "go" ? "GO!" : countdown}
             </p>
           </div>
