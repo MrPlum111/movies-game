@@ -6,9 +6,11 @@ import { PathTrail } from "@/components/PathTrail";
 import { formatTime } from "@/lib/format";
 import {
   absoluteShareUrl,
+  canShareChallenge,
   encodeSharedChallenge,
 } from "@/lib/share-challenge";
-import type { PathNode, TitleRef } from "@/lib/types";
+import type { ChallengeEndpoint, PathNode } from "@/lib/types";
+import { challengeEndpointLabel } from "@/lib/types";
 
 type Props = {
   status: "won" | "dnf";
@@ -17,8 +19,8 @@ type Props = {
   playerPath: PathNode[];
   shortestClicks: number;
   shortestPath: PathNode[];
-  start: TitleRef;
-  target: TitleRef;
+  start: ChallengeEndpoint;
+  target: ChallengeEndpoint;
   includeTv: boolean;
   onPlayAgain: () => void;
 };
@@ -51,8 +53,8 @@ export function ResultPanel({
           name,
           clicks,
           timeMs,
-          startTitle: start.title,
-          targetTitle: target.title,
+          startTitle: challengeEndpointLabel(start),
+          targetTitle: challengeEndpointLabel(target),
           status: "completed",
         }),
       });
@@ -63,6 +65,7 @@ export function ResultPanel({
   }
 
   async function copyShareLink() {
+    if (start.kind !== "title" || target.kind !== "title") return;
     const url = absoluteShareUrl(
       encodeSharedChallenge(start, target, includeTv),
     );
@@ -168,6 +171,7 @@ export function ResultPanel({
           >
             Play again
           </button>
+          {canShareChallenge(start, target) ? (
           <button
             type="button"
             onClick={() => void copyShareLink()}
@@ -175,6 +179,7 @@ export function ResultPanel({
           >
             {copied ? "Link copied" : "Share challenge"}
           </button>
+          ) : null}
           <Link
             href="/leaderboard"
             className="border-3 border-black bg-[#ffd52e] px-4 py-2 font-[family-name:var(--font-mono)] text-[10px] font-black uppercase shadow-[3px_3px_0_#000]"

@@ -61,14 +61,22 @@ export type PathNode =
   | { kind: "title"; mediaType: MediaType; id: number; label: string }
   | { kind: "person"; id: number; label: string };
 
+export type ChallengeEndpoint =
+  | ({ kind: "title" } & TitleRef)
+  | ({ kind: "person"; role: "actor" | "director" } & PersonRef);
+
 export type Challenge = {
-  start: TitleRef;
-  target: TitleRef;
+  start: ChallengeEndpoint;
+  target: ChallengeEndpoint;
   includeTv: boolean;
   shortestClicks: number;
   shortestPath: PathNode[];
   settings?: import("./challenge-settings").ChallengeSettings;
 };
+
+export function challengeEndpointLabel(endpoint: ChallengeEndpoint): string {
+  return endpoint.kind === "title" ? endpoint.title : endpoint.name;
+}
 
 export type ScoreEntry = {
   id: string;

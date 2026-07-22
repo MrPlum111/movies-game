@@ -3,11 +3,13 @@
 import { useMemo, useState } from "react";
 import { PageSearch, matchesQuery } from "@/components/PageSearch";
 import { Poster } from "@/components/Poster";
+import type { PathFilter } from "@/lib/challenge-settings";
 import type { PersonPage, TitleOnPerson } from "@/lib/types";
 
 type Props = {
   page: PersonPage;
   onSelectTitle: (title: TitleOnPerson) => void;
+  pathFilter?: PathFilter;
 };
 
 function TitleRow({
@@ -49,8 +51,15 @@ function TitleRow({
   );
 }
 
-export function PersonView({ page, onSelectTitle }: Props) {
+export function PersonView({
+  page,
+  onSelectTitle,
+  pathFilter = "any",
+}: Props) {
   const [query, setQuery] = useState("");
+
+  const showCast = pathFilter === "any" || pathFilter === "acting";
+  const showCrew = pathFilter === "any" || pathFilter === "directing";
 
   const cast = useMemo(
     () =>
@@ -68,11 +77,15 @@ export function PersonView({ page, onSelectTitle }: Props) {
   );
 
   const crewSections = useMemo(() => {
-    const sections = [
-      ["Directing", page.crew.directing],
-      ["Writing", page.crew.writing],
-      ["Producing", page.crew.producing],
-    ] as const;
+    if (!showCrew) return [];
+    const sections =
+      pathFilter === "directing"
+        ? ([["Directing", page.crew.directing]] as const)
+        : ([
+            ["Directing", page.crew.directing],
+            ["Writing", page.crew.writing],
+            ["Producing", page.crew.producing],
+          ] as const);
     return sections
       .map(([label, titles]) => ({
         label,
@@ -81,7 +94,7 @@ export function PersonView({ page, onSelectTitle }: Props) {
         ),
       }))
       .filter((s) => s.titles.length > 0);
-  }, [page.crew, query]);
+  }, [page.crew, query, pathFilter, showCrew]);
 
   return (
     <article className="animate-fade-up mx-auto max-w-7xl px-4 py-6">
@@ -119,7 +132,12 @@ export function PersonView({ page, onSelectTitle }: Props) {
         </div>
       </div>
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-2 lg:items-start">
+      <div
+        className={`mt-8 grid gap-8 lg:items-start ${
+          showCast && showCrew ? "lg:grid-cols-2" : "lg:grid-cols-1"
+        }`}
+      >
+        {showCast ? (
         <section className="min-w-0 border-4 border-black bg-[#fffdf7] shadow-[6px_6px_0_#000]">
           <div className="sticky top-[4.5rem] z-10 flex items-baseline justify-between border-b-4 border-black bg-[#6657e8] px-4 py-3 text-white">
             <h2 className="font-[family-name:var(--font-display)] text-2xl font-black uppercase">Acting credits</h2>
@@ -139,10 +157,14 @@ export function PersonView({ page, onSelectTitle }: Props) {
             </div>
           )}
         </section>
+        ) : null}
 
+        {showCrew ? (
         <section className="min-w-0 border-4 border-black bg-[#fffdf7] shadow-[6px_6px_0_#000]">
           <div className="sticky top-[4.5rem] z-10 flex items-baseline justify-between border-b-4 border-black bg-[#ef4438] px-4 py-3">
-            <h2 className="font-[family-name:var(--font-display)] text-2xl font-black uppercase">Crew credits</h2>
+            <h2 className="font-[family-name:var(--font-display)] text-2xl font-black uppercase">
+              {pathFilter === "directing" ? "Directing credits" : "Crew credits"}
+            </h2>
             <span className="font-[family-name:var(--font-mono)] text-xs font-black">
               {crewSections.reduce((n, s) => n + s.titles.length, 0)}
             </span>
@@ -170,6 +192,7 @@ export function PersonView({ page, onSelectTitle }: Props) {
             </div>
           )}
         </section>
+        ) : null}
       </div>
     </article>
   );

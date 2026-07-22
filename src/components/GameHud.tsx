@@ -1,12 +1,13 @@
 "use client";
 
 import { formatTime } from "@/lib/format";
-import type { TitleRef } from "@/lib/types";
+import type { ChallengeEndpoint } from "@/lib/types";
+import { challengeEndpointLabel } from "@/lib/types";
 
 type Props = {
   clicks: number;
   elapsedMs: number;
-  target: TitleRef;
+  target: ChallengeEndpoint;
   onGiveUp: () => void;
   onHint?: () => void;
   hintText?: string | null;
@@ -22,6 +23,15 @@ export function GameHud({
   hintText,
   hintsLeft = 0,
 }: Props) {
+  const subtitle =
+    target.kind === "title"
+      ? target.year
+        ? `(${target.year})`
+        : null
+      : target.role === "director"
+        ? "(Director)"
+        : "(Actor)";
+
   return (
     <header className="sticky top-0 z-20 border-b-4 border-black bg-black text-white">
       <div className="mx-auto flex max-w-7xl flex-wrap items-stretch px-3 sm:px-4">
@@ -46,9 +56,9 @@ export function GameHud({
             Target →
           </p>
           <p className="truncate font-[family-name:var(--font-display)] text-base font-black uppercase leading-tight sm:text-lg">
-            {target.title}
-            {target.year ? (
-              <span className="text-[#aaa]"> ({target.year})</span>
+            {challengeEndpointLabel(target)}
+            {subtitle ? (
+              <span className="text-[#aaa]"> {subtitle}</span>
             ) : null}
           </p>
           {hintText ? (

@@ -1,4 +1,5 @@
 import type { Challenge, MediaType, PathNode } from "./types";
+import { challengeEndpointLabel } from "./types";
 
 export type CurrentNode =
   | { kind: "title"; mediaType: MediaType; id: number }
@@ -35,6 +36,23 @@ export function clearSession(): void {
 }
 
 export function createSession(challenge: Challenge): GameSession {
+  if (challenge.start.kind === "person") {
+    return {
+      challenge,
+      path: [
+        {
+          kind: "person",
+          id: challenge.start.id,
+          label: challenge.start.name,
+        },
+      ],
+      current: { kind: "person", id: challenge.start.id },
+      clicks: 0,
+      startedAt: Date.now(),
+      status: "playing",
+    };
+  }
+
   return {
     challenge,
     path: [
@@ -55,3 +73,5 @@ export function createSession(challenge: Challenge): GameSession {
     status: "playing",
   };
 }
+
+export { challengeEndpointLabel };

@@ -6,22 +6,27 @@ import { useRouter } from "next/navigation";
 import { ChallengeLaunchSequence } from "@/components/ChallengeLaunchSequence";
 import {
   defaultChallengeSettings,
-  popularityLabel,
+  endpointKindLabel,
   parseChallengeSettings,
+  pathFilterLabel,
+  randomChallengeSettings,
   type ChallengeSettings,
   type Difficulty,
-  type PopularityTier,
+  type EndpointKind,
+  type PathFilter,
 } from "@/lib/challenge-settings";
 import { createSession, saveSession } from "@/lib/game-session";
 import { parseSharedChallenge } from "@/lib/share-challenge";
 import type { Challenge } from "@/lib/types";
 
-const SETTINGS_KEY = "moviesgame:settings";
+const SETTINGS_KEY = "moviesgame:settings:v2";
 
 export default function HomePage() {
   const router = useRouter();
   const sharedBootstrapped = useRef(false);
-  const [settings, setSettings] = useState<ChallengeSettings>(defaultChallengeSettings);
+  const [settings, setSettings] = useState<ChallengeSettings>(() =>
+    defaultChallengeSettings(),
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
@@ -82,6 +87,12 @@ export default function HomePage() {
     await startFromBody(settings);
   }
 
+  async function startRandom() {
+    const randomized = randomChallengeSettings();
+    setSettings(randomized);
+    await startFromBody(randomized);
+  }
+
   const finishLaunch = useCallback(() => {
     if (!pendingChallenge) return;
     const session = createSession(pendingChallenge);
@@ -106,29 +117,26 @@ export default function HomePage() {
     }));
   }
 
-  function setPopularity(
-    endpoint: "start" | "end",
-    popularity: PopularityTier,
-  ) {
-    setSettings((current) => ({
-      ...current,
-      [endpoint]: { ...current[endpoint], popularity },
-    }));
-  }
-
   const difficulties: {
     value: Difficulty;
     label: string;
-    clicks: string;
     mark: string;
   }[] = [
-    { value: 2, label: "Normal", clicks: "~4 clicks", mark: "★" },
-    { value: 3, label: "Hard", clicks: "~6 clicks", mark: "★★" },
-    { value: 4, label: "Expert", clicks: "~6 clicks", mark: "★★★" },
-    { value: 5, label: "Impossible", clicks: "~8 clicks", mark: "●" },
+    { value: 2, label: "Normal", mark: "★" },
+    { value: 3, label: "Hard", mark: "★★" },
+    { value: 4, label: "Expert", mark: "★★★" },
   ];
 
+  const endpointKinds: EndpointKind[] = ["title", "actor", "director"];
+  const pathFilters: PathFilter[] = ["any", "acting", "directing"];
   const rating = settings.start.minRating;
+
+  const pathBlurb =
+    settings.endpointKind === "title"
+      ? "Start on one title. Reach another through people."
+      : settings.endpointKind === "actor"
+        ? "Start on one actor. Reach another through titles."
+        : "Start on one director. Reach another through titles.";
 
   return (
     <main className="nb-dot-grid min-h-screen overflow-x-hidden bg-[#f4f0e8] text-black">
@@ -161,15 +169,15 @@ export default function HomePage() {
             </h2>
             <div className="mt-4 inline-flex flex-col items-start font-[family-name:var(--font-mono)] text-xs font-bold uppercase">
               <span className="bg-black px-3 py-0.5 text-white">
-                Start with one title.
+                Pick two endpoints.
               </span>
               <span className="-mt-px border-2 border-black bg-[#ffd52e] px-3 py-0.5">
-                Reach another.
+                Bridge them through the graph.
               </span>
             </div>
             <p className="mt-3 max-w-sm font-[family-name:var(--font-mono)] text-[11px] leading-relaxed">
-              Move only Movie → Person → Movie. Find the shortest path before
-              the clock gets away from you.
+              {pathBlurb} Find the shortest path before the clock gets away
+              from you.
             </p>
           </div>
 
@@ -227,7 +235,7 @@ export default function HomePage() {
                 <p className="font-[family-name:var(--font-mono)] text-xs font-black uppercase">
                   Difficulty
                 </p>
-                <div className="mt-3 grid grid-cols-4 gap-3">
+                <div className="mt-3 grid grid-cols-3 gap-3">
                   {difficulties.map((item) => {
                     const active = settings.difficulty === item.value;
                     return (
@@ -249,9 +257,6 @@ export default function HomePage() {
                         </span>
                         <span className="mt-3 block font-[family-name:var(--font-mono)] text-[11px] font-black uppercase">
                           {item.label}
-                        </span>
-                        <span className="mt-1 block font-[family-name:var(--font-mono)] text-[9px] uppercase">
-                          {item.clicks}
                         </span>
                       </button>
                     );
@@ -305,71 +310,85 @@ export default function HomePage() {
           </section>
 
           <div className="col-span-5 grid gap-4">
-            {(["start", "end"] as const).map((endpoint) => {
-              const isStart = endpoint === "start";
-              const color = isStart ? "bg-[#ef4438]" : "bg-[#6657e8]";
-              const current = settings[endpoint];
-              return (
-                <section
-                  key={endpoint}
-                  className={`border-4 border-black ${color} p-4 shadow-[7px_7px_0_#000]`}
-                >
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="font-[family-name:var(--font-mono)] text-sm font-black uppercase">
-                        {isStart ? "⚑ Start title" : "⚑ End title"}
-                      </h3>
-                      <p className="mt-1 font-[family-name:var(--font-mono)] text-[9px]">
-                        {isStart
-                          ? "Where your run begins."
-                          : "The target you must reach."}
-                      </p>
-                    </div>
-                    <span className="text-4xl" aria-hidden>
-                      🎬
-                    </span>
-                  </div>
-                  <div className="mt-3 flex gap-2">
-                    <label className="flex min-w-0 flex-1 items-center border-3 border-black bg-[#fffdf7] px-3">
-                      <span className="mr-2" aria-hidden>
-                        ⌕
-                      </span>
-                      <select
-                        aria-label={`${isStart ? "Start" : "End"} title popularity`}
-                        value={current.popularity}
-                        onChange={(e) =>
-                          setPopularity(
-                            endpoint,
-                            Number(e.target.value) as PopularityTier,
-                          )
-                        }
-                        className="h-11 min-w-0 flex-1 bg-transparent font-[family-name:var(--font-mono)] text-xs outline-none"
-                      >
-                        {([1, 2, 3, 4, 5] as PopularityTier[]).map(
-                          (tier) => (
-                            <option key={tier} value={tier}>
-                              {popularityLabel(tier)} title
-                            </option>
-                          ),
-                        )}
-                      </select>
-                    </label>
+            <section className="border-4 border-black bg-[#ef4438] p-4 shadow-[7px_7px_0_#000]">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="font-[family-name:var(--font-mono)] text-sm font-black uppercase">
+                    ⚑ Endpoint type
+                  </h3>
+                  <p className="mt-1 font-[family-name:var(--font-mono)] text-[9px]">
+                    Both ends use the same kind.
+                  </p>
+                </div>
+                <span className="text-4xl" aria-hidden>
+                  ↔
+                </span>
+              </div>
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                {endpointKinds.map((kind) => {
+                  const active = settings.endpointKind === kind;
+                  return (
                     <button
+                      key={kind}
                       type="button"
                       onClick={() =>
-                        setPopularity(
-                          endpoint,
-                          (Math.floor(Math.random() * 4) + 2) as PopularityTier,
-                        )
+                        setSettings((current) => ({
+                          ...current,
+                          endpointKind: kind,
+                        }))
                       }
-                      className="border-3 border-black bg-black px-4 font-[family-name:var(--font-mono)] text-[10px] font-black uppercase text-white"
+                      className={`border-3 border-black py-4 font-[family-name:var(--font-mono)] text-[11px] font-black uppercase shadow-[3px_3px_0_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none ${
+                        active
+                          ? "bg-black text-white"
+                          : "bg-[#fffdf7] text-black"
+                      }`}
                     >
-                      Randomize
+                      {endpointKindLabel(kind)}
                     </button>
-                  </div>
-                </section>
-              );
-            })}
+                  );
+                })}
+              </div>
+            </section>
+
+            <section className="border-4 border-black bg-[#6657e8] p-4 text-white shadow-[7px_7px_0_#000]">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="font-[family-name:var(--font-mono)] text-sm font-black uppercase">
+                    ▣ Path filter
+                  </h3>
+                  <p className="mt-1 font-[family-name:var(--font-mono)] text-[9px]">
+                    Who you can travel through.
+                  </p>
+                </div>
+                <span className="text-4xl" aria-hidden>
+                  ●
+                </span>
+              </div>
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                {pathFilters.map((filter) => {
+                  const active = settings.pathFilter === filter;
+                  return (
+                    <button
+                      key={filter}
+                      type="button"
+                      onClick={() =>
+                        setSettings((current) => ({
+                          ...current,
+                          pathFilter: filter,
+                        }))
+                      }
+                      className={`border-3 border-black py-4 font-[family-name:var(--font-mono)] text-[10px] font-black uppercase shadow-[3px_3px_0_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none ${
+                        active
+                          ? "bg-[#ffd52e] text-black"
+                          : "bg-[#fffdf7] text-black"
+                      }`}
+                    >
+                      {pathFilterLabel(filter)}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
           </div>
 
           <section className="col-span-4 border-4 border-black bg-[#9a57dc] p-4 shadow-[6px_6px_0_#000]">
@@ -377,7 +396,7 @@ export default function HomePage() {
               ▣ Era filter
             </h3>
             <p className="mt-1 font-[family-name:var(--font-mono)] text-[9px]">
-              Limit both titles by release year.
+              Limit titles by release year.
             </p>
             <div className="mt-4 flex items-center gap-3">
               <label className="flex items-center gap-2 font-[family-name:var(--font-mono)] text-[10px] font-black uppercase">
@@ -443,24 +462,34 @@ export default function HomePage() {
             </div>
           </section>
 
-          <button
-            type="button"
-            onClick={() => void startClassic()}
-            disabled={loading}
-            className="col-span-5 flex items-center justify-center gap-5 border-4 border-black bg-[#36ad72] px-6 shadow-[7px_7px_0_#000] transition hover:bg-[#2ecb7a] active:translate-x-1 active:translate-y-1 active:shadow-none disabled:opacity-60"
-          >
-            <span className="text-6xl font-black" aria-hidden>
-              →
-            </span>
-            <span className="text-left">
-              <span className="block font-[family-name:var(--font-display)] text-3xl font-black uppercase tracking-tight">
-                {loading ? "Building route…" : "Start speedrun"}
+          <div className="relative col-span-5">
+            <button
+              type="button"
+              onClick={() => void startClassic()}
+              disabled={loading}
+              className="flex h-full min-h-28 w-full items-center justify-center gap-5 border-4 border-black bg-[#36ad72] px-6 shadow-[7px_7px_0_#000] transition hover:bg-[#2ecb7a] active:translate-x-1 active:translate-y-1 active:shadow-none disabled:opacity-60"
+            >
+              <span className="text-6xl font-black" aria-hidden>
+                →
               </span>
-              <span className="block font-[family-name:var(--font-mono)] text-[10px] font-black uppercase">
-                Find the shortest path
+              <span className="text-left">
+                <span className="block font-[family-name:var(--font-display)] text-3xl font-black uppercase tracking-tight">
+                  {loading ? "Building route…" : "Start speedrun"}
+                </span>
+                <span className="block font-[family-name:var(--font-mono)] text-[10px] font-black uppercase">
+                  Find the shortest path
+                </span>
               </span>
-            </span>
-          </button>
+            </button>
+            <button
+              type="button"
+              onClick={() => void startRandom()}
+              disabled={loading}
+              className="absolute bottom-3 right-3 border-3 border-black bg-[#ffd52e] px-3 py-2 font-[family-name:var(--font-mono)] text-[10px] font-black uppercase shadow-[3px_3px_0_#000] transition hover:bg-white active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:opacity-60"
+            >
+              Start random
+            </button>
+          </div>
         </div>
 
         {error ? (
@@ -473,7 +502,9 @@ export default function HomePage() {
         ) : null}
 
         <footer className="mt-6 flex items-center justify-between bg-black px-4 py-2 font-[family-name:var(--font-mono)] text-[9px] uppercase text-white">
-          <span>This product uses the TMDB API but is not endorsed by TMDB.</span>
+          <span>
+            This product uses the TMDB API but is not endorsed by TMDB.
+          </span>
           <span>Made for movie lovers.</span>
         </footer>
       </div>

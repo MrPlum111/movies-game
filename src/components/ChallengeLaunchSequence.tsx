@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Poster } from "@/components/Poster";
 import type { Challenge } from "@/lib/types";
+import { challengeEndpointLabel } from "@/lib/types";
 
 type Phase =
   | "computing"
@@ -30,6 +31,26 @@ const ROLLING_TITLES = [
   "Jaws",
   "The Shining",
 ];
+
+function endpointCard(challenge: Challenge, which: "start" | "target") {
+  const endpoint = challenge[which];
+  if (endpoint.kind === "title") {
+    return {
+      title: endpoint.title,
+      year: endpoint.year,
+      posterPath: endpoint.posterPath,
+      kindLabel: which === "start" ? "Start title" : "Target title",
+      posterKind: "poster" as const,
+    };
+  }
+  return {
+    title: endpoint.name,
+    year: endpoint.role === "director" ? "Director" : "Actor",
+    posterPath: endpoint.profilePath,
+    kindLabel: which === "start" ? "Start person" : "Target person",
+    posterKind: "profile" as const,
+  };
+}
 
 export function ChallengeLaunchSequence({ challenge, onComplete }: Props) {
   const [phase, setPhase] = useState<Phase>("computing");
@@ -122,11 +143,20 @@ export function ChallengeLaunchSequence({ challenge, onComplete }: Props) {
 
         <div className="grid grid-cols-1 items-stretch gap-4 md:grid-cols-[1fr_auto_1fr] md:gap-6">
           <TitleCard
-            label="Start"
+            label={showStart ? endpointCard(challenge, "start").kindLabel : "Start"}
             color="red"
-            title={showStart ? challenge.start.title : "Scanning titles…"}
-            year={showStart ? challenge.start.year : null}
-            posterPath={showStart ? challenge.start.posterPath : null}
+            title={
+              showStart
+                ? challengeEndpointLabel(challenge.start)
+                : "Scanning graph…"
+            }
+            year={showStart ? endpointCard(challenge, "start").year : null}
+            posterPath={
+              showStart ? endpointCard(challenge, "start").posterPath : null
+            }
+            posterKind={
+              showStart ? endpointCard(challenge, "start").posterKind : "poster"
+            }
             locked={showStart}
           />
 
@@ -137,16 +167,31 @@ export function ChallengeLaunchSequence({ challenge, onComplete }: Props) {
           </div>
 
           <TitleCard
-            label="Target"
+            label={
+              showTarget && challenge
+                ? endpointCard(challenge, "target").kindLabel
+                : "Target"
+            }
             color="purple"
             title={
               showTarget && challenge
-                ? challenge.target.title
+                ? challengeEndpointLabel(challenge.target)
                 : ROLLING_TITLES[rollingIndex]
             }
-            year={showTarget && challenge ? challenge.target.year : null}
+            year={
+              showTarget && challenge
+                ? endpointCard(challenge, "target").year
+                : null
+            }
             posterPath={
-              showTarget && challenge ? challenge.target.posterPath : null
+              showTarget && challenge
+                ? endpointCard(challenge, "target").posterPath
+                : null
+            }
+            posterKind={
+              showTarget && challenge
+                ? endpointCard(challenge, "target").posterKind
+                : "poster"
             }
             locked={showTarget}
             rolling={!showTarget}
@@ -190,6 +235,7 @@ function TitleCard({
   title,
   year,
   posterPath,
+  posterKind = "poster",
   color,
   locked,
   rolling = false,
@@ -198,6 +244,7 @@ function TitleCard({
   title: string;
   year: string | null;
   posterPath: string | null;
+  posterKind?: "poster" | "profile";
   color: "red" | "purple";
   locked: boolean;
   rolling?: boolean;
@@ -215,7 +262,8 @@ function TitleCard({
           <Poster
             path={posterPath}
             alt={title}
-            className="h-full w-full border-3 border-black"
+            kind={posterKind}
+            className="h-full w-full border-3 border-black object-cover"
           />
         ) : (
           <div
@@ -231,7 +279,7 @@ function TitleCard({
       <div className="flex min-w-0 flex-col justify-between p-4 md:p-6">
         <div className="flex items-center justify-between border-b-3 border-black pb-3">
           <p className="font-[family-name:var(--font-mono)] text-xs font-black uppercase tracking-[0.16em]">
-            {label} title
+            {label}
           </p>
           <span className="font-[family-name:var(--font-mono)] text-[10px] font-black uppercase">
             {locked ? "Locked" : "Searching"}
@@ -246,7 +294,7 @@ function TitleCard({
           </p>
         </div>
         <p className="font-[family-name:var(--font-mono)] text-[10px] font-black uppercase">
-          Movie → Person → Movie
+          Title ↔ Person
         </p>
       </div>
     </section>

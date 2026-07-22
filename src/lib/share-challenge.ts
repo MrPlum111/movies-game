@@ -1,4 +1,4 @@
-import type { MediaType, TitleRef } from "./types";
+import type { ChallengeEndpoint, MediaType, TitleRef } from "./types";
 
 export type SharedEndpoints = {
   start: { mediaType: MediaType; id: number };
@@ -24,6 +24,13 @@ export function encodeSharedChallenge(
   });
   if (includeTv) params.set("tv", "1");
   return `/?${params.toString()}`;
+}
+
+export function canShareChallenge(
+  start: ChallengeEndpoint,
+  target: ChallengeEndpoint,
+): start is ChallengeEndpoint & { kind: "title" } {
+  return start.kind === "title" && target.kind === "title";
 }
 
 export function parseSharedChallenge(

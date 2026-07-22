@@ -2,17 +2,27 @@ import {
   hopsForDifficulty,
   matchesEndpoint,
   type ChallengeSettings,
+  type PathFilter,
 } from "./challenge-settings";
 import { findShortestPath, sharesPeople } from "./graph";
 import {
+  fetchPersonPool,
   fetchTitlePool,
   getPersonName,
+  getPersonRef,
   getPersonTitleKeys,
   getTitlePersonIds,
   parseTitleKey,
   titleKey,
 } from "./tmdb";
-import type { Challenge, MediaType, PathNode, TitleRef } from "./types";
+import type {
+  Challenge,
+  ChallengeEndpoint,
+  MediaType,
+  PathNode,
+  PersonRef,
+  TitleRef,
+} from "./types";
 
 function shuffle<T>(items: T[]): T[] {
   const arr = [...items];
@@ -23,12 +33,6 @@ function shuffle<T>(items: T[]): T[] {
   return arr;
 }
 
-type Frontier = {
-  title: TitleRef;
-  path: PathNode[];
-  personIds: number[];
-};
-
 async function personLabel(id: number): Promise<string> {
   try {
     return await getPersonName(id);
@@ -37,34 +41,53 @@ async function personLabel(id: number): Promise<string> {
   }
 }
 
-/**
- * Expand one movie-hop: Title → Person → Title
- * Returns up to `beam` new frontiers.
- */
-async function expandHop(
-  nodes: Frontier[],
+type TitleFrontier = {
+  title: TitleRef;
+  path: PathNode[];
+  personIds: number[];
+};
+
+type PersonFrontier = {
+  person: PersonRef;
+  path: PathNode[];
+  titleKeys: string[];
+};
+
+async function expandTitleHop(
+  nodes: TitleFrontier[],
   includeTv: boolean,
+  pathFilter: PathFilter,
   beam: number,
-): Promise<Frontier[]> {
-  const next: Frontier[] = [];
+): Promise<TitleFrontier[]> {
+  const next: TitleFrontier[] = [];
   const seen = new Set(nodes.map((n) => titleKey(n.title.mediaType, n.title.id)));
 
   for (const node of shuffle(nodes)) {
     const people = shuffle(node.personIds).slice(0, 5);
     for (const personId of people) {
       const titles = shuffle(
-        await getPersonTitleKeys(personId, includeTv, 18),
+        await getPersonTitleKeys(personId, includeTv, 18, pathFilter),
       ).slice(0, 6);
       const pName = await personLabel(personId);
 
       for (const tKey of titles) {
         if (seen.has(tKey)) continue;
-        if (node.path.some((p) => p.kind === "title" && titleKey(p.mediaType, p.id) === tKey)) {
+        if (
+          node.path.some(
+            (p) =>
+              p.kind === "title" && titleKey(p.mediaType, p.id) === tKey,
+          )
+        ) {
           continue;
         }
 
         const parsed = parseTitleKey(tKey);
-        const meta = await getTitlePersonIds(parsed.mediaType, parsed.id, 12);
+        const meta = await getTitlePersonIds(
+          parsed.mediaType,
+          parsed.id,
+          12,
+          pathFilter,
+        );
         if (!meta) continue;
 
         seen.add(tKey);
@@ -93,17 +116,82 @@ async function expandHop(
   return shuffle(next).slice(0, beam);
 }
 
-export async function generateClassicChallenge(
+async function expandPersonHop(
+  nodes: PersonFrontier[],
+  includeTv: boolean,
+  pathFilter: PathFilter,
+  beam: number,
+): Promise<PersonFrontier[]> {
+  const next: PersonFrontier[] = [];
+  const seen = new Set(nodes.map((n) => n.person.id));
+
+  for (const node of shuffle(nodes)) {
+    const titles = shuffle(node.titleKeys).slice(0, 6);
+    for (const tKey of titles) {
+      const parsed = parseTitleKey(tKey);
+      const meta = await getTitlePersonIds(
+        parsed.mediaType,
+        parsed.id,
+        12,
+        pathFilter,
+      );
+      if (!meta) continue;
+
+      const people = shuffle(meta.personIds).slice(0, 6);
+      for (const personId of people) {
+        if (seen.has(personId)) continue;
+        if (node.path.some((p) => p.kind === "person" && p.id === personId)) {
+          continue;
+        }
+
+        const person = await getPersonRef(personId);
+        if (!person) continue;
+        const titleKeys = await getPersonTitleKeys(
+          personId,
+          includeTv,
+          18,
+          pathFilter,
+        );
+        if (titleKeys.length === 0) continue;
+
+        seen.add(personId);
+        next.push({
+          person,
+          titleKeys,
+          path: [
+            ...node.path,
+            {
+              kind: "title",
+              mediaType: meta.title.mediaType,
+              id: meta.title.id,
+              label: meta.title.title,
+            },
+            { kind: "person", id: person.id, label: person.name },
+          ],
+        });
+
+        if (next.length >= beam * 3) break;
+      }
+      if (next.length >= beam * 3) break;
+    }
+    if (next.length >= beam * 3) break;
+  }
+
+  return shuffle(next).slice(0, beam);
+}
+
+async function generateTitleChallenge(
   settings: ChallengeSettings,
 ): Promise<Challenge> {
   const hops = hopsForDifficulty(settings.difficulty);
+  const pathFilter = settings.pathFilter;
   const startPool = shuffle(
     await fetchTitlePool(settings.start, settings.includeTv, 3),
   );
 
   if (startPool.length === 0) {
     throw new Error(
-      "No titles match your start filters — loosen popularity, year, or genre.",
+      "No titles match your filters — loosen year or minimum rating.",
     );
   }
 
@@ -114,14 +202,17 @@ export async function generateClassicChallenge(
       const startMeta = await getTitlePersonIds(
         startSeed.mediaType,
         startSeed.id,
+        undefined,
+        pathFilter,
       );
       if (!startMeta) continue;
       if (!matchesEndpoint(startMeta.title, settings.start)) continue;
+      if (startMeta.personIds.length === 0) continue;
 
       const start = startMeta.title;
       const startPeople = startMeta.personIds;
 
-      let frontier: Frontier[] = [
+      let frontier: TitleFrontier[] = [
         {
           title: start,
           personIds: startPeople,
@@ -136,9 +227,13 @@ export async function generateClassicChallenge(
         },
       ];
 
-      // Expand (hops - 1) times to reach intermediate nodes, then final hop filters ends
       for (let h = 0; h < hops - 1; h++) {
-        frontier = await expandHop(frontier, settings.includeTv, 16);
+        frontier = await expandTitleHop(
+          frontier,
+          settings.includeTv,
+          pathFilter,
+          16,
+        );
         if (frontier.length === 0) break;
       }
 
@@ -147,12 +242,16 @@ export async function generateClassicChallenge(
         continue;
       }
 
-      // Final hop: look for an end title matching end filters
       for (const node of shuffle(frontier)) {
         const people = shuffle(node.personIds).slice(0, 6);
         for (const personId of people) {
           const titles = shuffle(
-            await getPersonTitleKeys(personId, settings.includeTv, 20),
+            await getPersonTitleKeys(
+              personId,
+              settings.includeTv,
+              20,
+              pathFilter,
+            ),
           ).slice(0, 8);
           const pName = await personLabel(personId);
 
@@ -169,7 +268,12 @@ export async function generateClassicChallenge(
             }
 
             const parsed = parseTitleKey(tKey);
-            const endMeta = await getTitlePersonIds(parsed.mediaType, parsed.id);
+            const endMeta = await getTitlePersonIds(
+              parsed.mediaType,
+              parsed.id,
+              undefined,
+              pathFilter,
+            );
             if (!endMeta) continue;
 
             const target = endMeta.title;
@@ -199,12 +303,17 @@ export async function generateClassicChallenge(
             ];
 
             const clicks = path.length - 1;
-            // Expected: hops * 2
             if (clicks < hops * 2) continue;
 
+            const startEndpoint: ChallengeEndpoint = { kind: "title", ...start };
+            const targetEndpoint: ChallengeEndpoint = {
+              kind: "title",
+              ...target,
+            };
+
             return {
-              start,
-              target,
+              start: startEndpoint,
+              target: targetEndpoint,
               includeTv: settings.includeTv,
               shortestClicks: clicks,
               shortestPath: path,
@@ -223,16 +332,164 @@ export async function generateClassicChallenge(
   throw new Error(lastError);
 }
 
-/** Rebuild a challenge for a fixed start/target pair (shareable links). */
+async function generatePersonChallenge(
+  settings: ChallengeSettings,
+): Promise<Challenge> {
+  const hops = hopsForDifficulty(settings.difficulty);
+  const pathFilter = settings.pathFilter;
+  const role = settings.endpointKind === "director" ? "director" : "actor";
+  const pool = shuffle(await fetchPersonPool(role, 4));
+
+  if (pool.length === 0) {
+    throw new Error("Could not load people for this endpoint mode");
+  }
+
+  let lastError = "Could not find a person-to-person route";
+
+  for (const startSeed of pool.slice(0, 12)) {
+    try {
+      const startTitles = await getPersonTitleKeys(
+        startSeed.id,
+        settings.includeTv,
+        24,
+        pathFilter,
+      );
+      if (startTitles.length === 0) continue;
+
+      // Prefer titles that also match era/rating filters when possible
+      const filteredTitles: string[] = [];
+      for (const tKey of startTitles.slice(0, 20)) {
+        const parsed = parseTitleKey(tKey);
+        const meta = await getTitlePersonIds(
+          parsed.mediaType,
+          parsed.id,
+          8,
+          pathFilter,
+        );
+        if (!meta) continue;
+        if (
+          matchesEndpoint(meta.title, settings.start) ||
+          matchesEndpoint(meta.title, settings.end)
+        ) {
+          filteredTitles.push(tKey);
+        }
+      }
+      const seedTitles =
+        filteredTitles.length > 0 ? filteredTitles : startTitles;
+
+      let frontier: PersonFrontier[] = [
+        {
+          person: startSeed,
+          titleKeys: seedTitles,
+          path: [
+            { kind: "person", id: startSeed.id, label: startSeed.name },
+          ],
+        },
+      ];
+
+      for (let h = 0; h < hops - 1; h++) {
+        frontier = await expandPersonHop(
+          frontier,
+          settings.includeTv,
+          pathFilter,
+          16,
+        );
+        if (frontier.length === 0) break;
+      }
+
+      if (frontier.length === 0) {
+        lastError = "Person graph expansion dried up";
+        continue;
+      }
+
+      for (const node of shuffle(frontier)) {
+        const titles = shuffle(node.titleKeys).slice(0, 8);
+        for (const tKey of titles) {
+          const parsed = parseTitleKey(tKey);
+          const meta = await getTitlePersonIds(
+            parsed.mediaType,
+            parsed.id,
+            12,
+            pathFilter,
+          );
+          if (!meta) continue;
+          if (!matchesEndpoint(meta.title, settings.end) && settings.end.minRating > 0) {
+            // soft: still allow if rating filter empty; if set, prefer matching titles
+            if ((meta.title.voteAverage ?? 0) < settings.end.minRating) continue;
+          }
+
+          for (const personId of shuffle(meta.personIds).slice(0, 8)) {
+            if (personId === startSeed.id) continue;
+            if (node.path.some((p) => p.kind === "person" && p.id === personId)) {
+              continue;
+            }
+
+            const target = await getPersonRef(personId);
+            if (!target) continue;
+
+            const path: PathNode[] = [
+              ...node.path,
+              {
+                kind: "title",
+                mediaType: meta.title.mediaType,
+                id: meta.title.id,
+                label: meta.title.title,
+              },
+              { kind: "person", id: target.id, label: target.name },
+            ];
+
+            const clicks = path.length - 1;
+            if (clicks < hops * 2) continue;
+
+            return {
+              start: { kind: "person", role, ...startSeed },
+              target: { kind: "person", role, ...target },
+              includeTv: settings.includeTv,
+              shortestClicks: clicks,
+              shortestPath: path,
+              settings,
+            };
+          }
+        }
+      }
+
+      lastError = "No suitable end person from this start";
+    } catch (e) {
+      lastError = e instanceof Error ? e.message : "Attempt failed";
+    }
+  }
+
+  throw new Error(lastError);
+}
+
+export async function generateClassicChallenge(
+  settings: ChallengeSettings,
+): Promise<Challenge> {
+  if (settings.endpointKind === "title") {
+    return generateTitleChallenge(settings);
+  }
+  return generatePersonChallenge(settings);
+}
+
+/** Rebuild a challenge for a fixed start/target title pair (shareable links). */
 export async function buildChallengeFromEndpoints(input: {
   start: { mediaType: MediaType; id: number };
   target: { mediaType: MediaType; id: number };
   includeTv: boolean;
+  pathFilter?: PathFilter;
 }): Promise<Challenge> {
-  const startMeta = await getTitlePersonIds(input.start.mediaType, input.start.id);
+  const pathFilter = input.pathFilter ?? "any";
+  const startMeta = await getTitlePersonIds(
+    input.start.mediaType,
+    input.start.id,
+    undefined,
+    pathFilter,
+  );
   const targetMeta = await getTitlePersonIds(
     input.target.mediaType,
     input.target.id,
+    undefined,
+    pathFilter,
   );
   if (!startMeta || !targetMeta) {
     throw new Error("Could not load one of the shared titles");
@@ -243,14 +500,15 @@ export async function buildChallengeFromEndpoints(input: {
     input.target,
     input.includeTv,
     12,
+    pathFilter,
   );
   if (!result) {
     throw new Error("No path found between these titles");
   }
 
   return {
-    start: startMeta.title,
-    target: targetMeta.title,
+    start: { kind: "title", ...startMeta.title },
+    target: { kind: "title", ...targetMeta.title },
     includeTv: input.includeTv,
     shortestClicks: result.clicks,
     shortestPath: result.path,

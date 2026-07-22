@@ -23,6 +23,7 @@ import type {
   TitleOnPerson,
   TitlePage,
 } from "@/lib/types";
+import { challengeEndpointLabel } from "@/lib/types";
 
 export default function PlayPage() {
   const router = useRouter();
@@ -118,6 +119,10 @@ export default function PlayPage() {
     if (!session || session.status !== "playing") return;
     if (session.current.kind !== "title") return;
 
+    const won =
+      session.challenge.target.kind === "person" &&
+      person.id === session.challenge.target.id;
+
     const next: GameSession = {
       ...session,
       clicks: session.clicks + 1,
@@ -126,6 +131,8 @@ export default function PlayPage() {
         ...session.path,
         { kind: "person", id: person.id, label: person.name },
       ],
+      status: won ? "won" : "playing",
+      finishedAt: won ? Date.now() : undefined,
     };
     commit(next);
   }
@@ -135,6 +142,7 @@ export default function PlayPage() {
     if (session.current.kind !== "person") return;
 
     const won =
+      session.challenge.target.kind === "title" &&
       title.id === session.challenge.target.id &&
       title.mediaType === session.challenge.target.mediaType;
 
@@ -176,8 +184,8 @@ export default function PlayPage() {
         status: "dnf",
         clicks: next.clicks,
         timeMs: (next.finishedAt ?? Date.now()) - next.startedAt,
-        startTitle: next.challenge.start.title,
-        targetTitle: next.challenge.target.title,
+        startTitle: challengeEndpointLabel(next.challenge.start),
+        targetTitle: challengeEndpointLabel(next.challenge.target),
       }),
     });
   }
@@ -197,28 +205,30 @@ export default function PlayPage() {
   }
 
   async function playAgain() {
-    const body =
-      session?.challenge.settings ??
-      ({
-        difficulty: 2,
-        includeTv: session?.challenge.includeTv ?? false,
-        start: {
-          popularity: 4,
-          yearFrom: null,
-          yearTo: null,
-          minRating: 0,
-          language: "any",
-          genreId: null,
-        },
-        end: {
-          popularity: 4,
-          yearFrom: null,
-          yearTo: null,
-          minRating: 0,
-          language: "any",
-          genreId: null,
-        },
-      } as const);
+      const body =
+        session?.challenge.settings ??
+        ({
+          difficulty: 2,
+          includeTv: session?.challenge.includeTv ?? false,
+          endpointKind: "title",
+          pathFilter: "any",
+          start: {
+            popularity: 4,
+            yearFrom: null,
+            yearTo: null,
+            minRating: 0,
+            language: "any",
+            genreId: null,
+          },
+          end: {
+            popularity: 4,
+            yearFrom: null,
+            yearTo: null,
+            minRating: 0,
+            language: "any",
+            genreId: null,
+          },
+        } as const);
 
     clearSession();
     setLaunching(true);
@@ -326,11 +336,16 @@ export default function PlayPage() {
               page={titlePage}
               onSelectPerson={selectPerson}
               opening={opening}
+              pathFilter={session.challenge.settings?.pathFilter ?? "any"}
             />
           ) : null}
 
           {!loading && personPage && session.current.kind === "person" ? (
-            <PersonView page={personPage} onSelectTitle={selectTitle} />
+            <PersonView
+              page={personPage}
+              onSelectTitle={selectTitle}
+              pathFilter={session.challenge.settings?.pathFilter ?? "any"}
+            />
           ) : null}
 
           {session.status !== "playing" ? (
