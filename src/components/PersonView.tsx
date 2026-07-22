@@ -12,6 +12,8 @@ type Props = {
   pathFilter?: PathFilter;
 };
 
+type Tab = "cast" | "crew";
+
 function TitleRow({
   title,
   onSelect,
@@ -60,6 +62,10 @@ export function PersonView({
 
   const showCast = pathFilter === "any" || pathFilter === "acting";
   const showCrew = pathFilter === "any" || pathFilter === "directing";
+  const crewTabLabel = pathFilter === "directing" ? "Directing" : "Crew";
+  const crewSectionTitle =
+    pathFilter === "directing" ? "Directing credits" : "Crew credits";
+  const [tab, setTab] = useState<Tab>(showCast ? "cast" : "crew");
 
   const cast = useMemo(
     () =>
@@ -96,9 +102,42 @@ export function PersonView({
       .filter((s) => s.titles.length > 0);
   }, [page.crew, query, pathFilter, showCrew]);
 
+  const crewCount = crewSections.reduce((n, s) => n + s.titles.length, 0);
+
   return (
-    <article className="animate-fade-up mx-auto max-w-7xl px-4 py-6">
-      <div className="flex flex-col items-start gap-5 border-4 border-black bg-[#fffdf7] p-5 shadow-[7px_7px_0_#000] sm:flex-row">
+    <article className="animate-fade-up mx-auto max-w-7xl px-3 py-4 md:px-4 md:py-6">
+      {/* Mobile horizontal hero */}
+      <div className="flex gap-3 border-4 border-black bg-[#fffdf7] p-3 shadow-[5px_5px_0_#000] md:hidden">
+        <Poster
+          path={page.profilePath}
+          alt={page.name}
+          kind="profile"
+          className="h-[7.5rem] w-[5rem] shrink-0 border-3 border-black bg-[#6657e8] object-cover"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="inline-block bg-black px-2 py-0.5 font-[family-name:var(--font-mono)] text-[9px] font-black uppercase tracking-[0.16em] text-white">
+            Person
+          </p>
+          <h1 className="mt-1.5 font-[family-name:var(--font-display)] text-xl font-black uppercase leading-[0.95] tracking-tight">
+            {page.name}
+          </h1>
+          {page.knownForDepartment ? (
+            <p className="mt-1.5 font-[family-name:var(--font-mono)] text-[10px] font-black uppercase text-[#6657e8]">
+              Known for {page.knownForDepartment}
+            </p>
+          ) : null}
+          <div className="mt-2">
+            <PageSearch
+              value={query}
+              onChange={setQuery}
+              placeholder="Search titles…"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop hero */}
+      <div className="hidden items-start gap-5 border-4 border-black bg-[#fffdf7] p-5 shadow-[7px_7px_0_#000] md:flex">
         <Poster
           path={page.profilePath}
           alt={page.name}
@@ -132,66 +171,151 @@ export function PersonView({
         </div>
       </div>
 
+      {/* Mobile tabs */}
+      {showCast && showCrew ? (
+        <div className="mt-4 grid grid-cols-2 border-4 border-black md:hidden">
+          <button
+            type="button"
+            onClick={() => setTab("cast")}
+            className={`border-r-4 border-black py-3 font-[family-name:var(--font-mono)] text-xs font-black uppercase ${
+              tab === "cast" ? "bg-[#6657e8] text-white" : "bg-[#fffdf7]"
+            }`}
+          >
+            Acting · {cast.length}
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("crew")}
+            className={`py-3 font-[family-name:var(--font-mono)] text-xs font-black uppercase ${
+              tab === "crew" ? "bg-[#ef4438]" : "bg-[#fffdf7]"
+            }`}
+          >
+            {crewTabLabel} · {crewCount}
+          </button>
+        </div>
+      ) : null}
+
+      {/* Mobile list */}
+      <div className="mt-3 md:hidden">
+        {showCast && (!showCrew || tab === "cast") ? (
+          <section className="border-4 border-black bg-[#fffdf7] shadow-[4px_4px_0_#000]">
+            {cast.length === 0 ? (
+              <p className="p-4 font-[family-name:var(--font-mono)] text-xs">
+                No acting credits match.
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 gap-2 p-3">
+                {cast.map((title) => (
+                  <TitleRow
+                    key={`cast-${title.mediaType}-${title.id}`}
+                    title={title}
+                    onSelect={() => onSelectTitle(title)}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+        ) : null}
+
+        {showCrew && (!showCast || tab === "crew") ? (
+          <section className="border-4 border-black bg-[#fffdf7] shadow-[4px_4px_0_#000]">
+            {crewSections.length === 0 ? (
+              <p className="p-4 font-[family-name:var(--font-mono)] text-xs">
+                No crew credits match.
+              </p>
+            ) : (
+              <div className="p-3">
+                {crewSections.map(({ label, titles }) => (
+                  <div key={label} className="mb-4 last:mb-0">
+                    <h3 className="mb-2 inline-block border-2 border-black bg-[#ffd52e] px-2 py-1 font-[family-name:var(--font-mono)] text-[10px] font-black uppercase tracking-[0.18em]">
+                      {label}
+                    </h3>
+                    <div className="grid grid-cols-1 gap-2">
+                      {titles.map((title) => (
+                        <TitleRow
+                          key={`${label}-${title.mediaType}-${title.id}`}
+                          title={title}
+                          onSelect={() => onSelectTitle(title)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        ) : null}
+      </div>
+
+      {/* Desktop two-column */}
       <div
-        className={`mt-8 grid gap-8 lg:items-start ${
+        className={`mt-8 hidden gap-8 lg:items-start md:grid ${
           showCast && showCrew ? "lg:grid-cols-2" : "lg:grid-cols-1"
         }`}
       >
         {showCast ? (
-        <section className="min-w-0 border-4 border-black bg-[#fffdf7] shadow-[6px_6px_0_#000]">
-          <div className="sticky top-[4.5rem] z-10 flex items-baseline justify-between border-b-4 border-black bg-[#6657e8] px-4 py-3 text-white">
-            <h2 className="font-[family-name:var(--font-display)] text-2xl font-black uppercase">Acting credits</h2>
-            <span className="font-[family-name:var(--font-mono)] text-xs font-black">{cast.length}</span>
-          </div>
-          {cast.length === 0 ? (
-            <p className="p-4 font-[family-name:var(--font-mono)] text-xs">No acting credits match.</p>
-          ) : (
-            <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2">
-              {cast.map((title) => (
-                <TitleRow
-                  key={`cast-${title.mediaType}-${title.id}`}
-                  title={title}
-                  onSelect={() => onSelectTitle(title)}
-                />
-              ))}
+          <section className="min-w-0 border-4 border-black bg-[#fffdf7] shadow-[6px_6px_0_#000]">
+            <div className="sticky top-[4.5rem] z-10 flex items-baseline justify-between border-b-4 border-black bg-[#6657e8] px-4 py-3 text-white">
+              <h2 className="font-[family-name:var(--font-display)] text-2xl font-black uppercase">
+                Acting credits
+              </h2>
+              <span className="font-[family-name:var(--font-mono)] text-xs font-black">
+                {cast.length}
+              </span>
             </div>
-          )}
-        </section>
+            {cast.length === 0 ? (
+              <p className="p-4 font-[family-name:var(--font-mono)] text-xs">
+                No acting credits match.
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2">
+                {cast.map((title) => (
+                  <TitleRow
+                    key={`cast-${title.mediaType}-${title.id}`}
+                    title={title}
+                    onSelect={() => onSelectTitle(title)}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
         ) : null}
 
         {showCrew ? (
-        <section className="min-w-0 border-4 border-black bg-[#fffdf7] shadow-[6px_6px_0_#000]">
-          <div className="sticky top-[4.5rem] z-10 flex items-baseline justify-between border-b-4 border-black bg-[#ef4438] px-4 py-3">
-            <h2 className="font-[family-name:var(--font-display)] text-2xl font-black uppercase">
-              {pathFilter === "directing" ? "Directing credits" : "Crew credits"}
-            </h2>
-            <span className="font-[family-name:var(--font-mono)] text-xs font-black">
-              {crewSections.reduce((n, s) => n + s.titles.length, 0)}
-            </span>
-          </div>
-          {crewSections.length === 0 ? (
-            <p className="p-4 font-[family-name:var(--font-mono)] text-xs">No crew credits match.</p>
-          ) : (
-            <div className="p-4">
-            {crewSections.map(({ label, titles }) => (
-              <div key={label} className="mb-6 last:mb-0">
-                <h3 className="mb-3 inline-block border-2 border-black bg-[#ffd52e] px-2 py-1 font-[family-name:var(--font-mono)] text-[10px] font-black uppercase tracking-[0.18em]">
-                  {label}
-                </h3>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {titles.map((title) => (
-                    <TitleRow
-                      key={`${label}-${title.mediaType}-${title.id}`}
-                      title={title}
-                      onSelect={() => onSelectTitle(title)}
-                    />
-                  ))}
-                </div>
-              </div>
-            ))}
+          <section className="min-w-0 border-4 border-black bg-[#fffdf7] shadow-[6px_6px_0_#000]">
+            <div className="sticky top-[4.5rem] z-10 flex items-baseline justify-between border-b-4 border-black bg-[#ef4438] px-4 py-3">
+              <h2 className="font-[family-name:var(--font-display)] text-2xl font-black uppercase">
+                {crewSectionTitle}
+              </h2>
+              <span className="font-[family-name:var(--font-mono)] text-xs font-black">
+                {crewCount}
+              </span>
             </div>
-          )}
-        </section>
+            {crewSections.length === 0 ? (
+              <p className="p-4 font-[family-name:var(--font-mono)] text-xs">
+                No crew credits match.
+              </p>
+            ) : (
+              <div className="p-4">
+                {crewSections.map(({ label, titles }) => (
+                  <div key={label} className="mb-6 last:mb-0">
+                    <h3 className="mb-3 inline-block border-2 border-black bg-[#ffd52e] px-2 py-1 font-[family-name:var(--font-mono)] text-[10px] font-black uppercase tracking-[0.18em]">
+                      {label}
+                    </h3>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      {titles.map((title) => (
+                        <TitleRow
+                          key={`${label}-${title.mediaType}-${title.id}`}
+                          title={title}
+                          onSelect={() => onSelectTitle(title)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
         ) : null}
       </div>
     </article>

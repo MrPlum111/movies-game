@@ -304,15 +304,16 @@ export default function PlayPage() {
 
       {session && !launching ? (
         <>
-          <div className="mx-auto max-w-7xl px-4 pt-5">
+          <div className="mx-auto max-w-7xl px-3 pt-3 md:px-4 md:pt-5">
             <div className="border-3 border-black bg-[#fffdf7] p-3 shadow-[4px_4px_0_#000]">
-              <p className="mb-2 font-[family-name:var(--font-mono)] text-[9px] font-black uppercase tracking-[0.2em]">
+              <p className="mb-2 hidden font-[family-name:var(--font-mono)] text-[9px] font-black uppercase tracking-[0.2em] md:block">
                 Current route
               </p>
               <PathTrail
                 path={session.path}
                 interactive={session.status !== "playing"}
                 includeTv={session.challenge.includeTv}
+                compact
               />
             </div>
           </div>

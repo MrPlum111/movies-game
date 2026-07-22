@@ -13,6 +13,8 @@ type Props = {
   pathFilter?: PathFilter;
 };
 
+type Tab = "cast" | "crew";
+
 function PersonRow({
   person,
   onSelect,
@@ -59,6 +61,8 @@ export function TitleView({
 
   const showCast = pathFilter === "any" || pathFilter === "acting";
   const showCrew = pathFilter === "any" || pathFilter === "directing";
+  const crewTabLabel = pathFilter === "directing" ? "Directors" : "Crew";
+  const [tab, setTab] = useState<Tab>(showCast ? "cast" : "crew");
 
   const cast = useMemo(
     () =>
@@ -88,11 +92,52 @@ export function TitleView({
       .filter((s) => s.people.length > 0);
   }, [page.crew, query, pathFilter, showCrew]);
 
+  const crewCount = crewSections.reduce((n, s) => n + s.people.length, 0);
+
   return (
     <article
-      className={`${opening ? "launch-page-enter" : "animate-fade-up"} mx-auto max-w-7xl px-4 py-6`}
+      className={`${opening ? "launch-page-enter" : "animate-fade-up"} mx-auto max-w-7xl px-3 py-4 md:px-4 md:py-6`}
     >
-      <div className="grid gap-6 border-4 border-black bg-[#fffdf7] p-5 shadow-[7px_7px_0_#000] md:grid-cols-[180px_1fr]">
+      {/* Mobile horizontal hero */}
+      <div
+        className={`flex gap-3 border-4 border-black bg-[#fffdf7] p-3 shadow-[5px_5px_0_#000] md:hidden ${
+          opening ? "launch-page-enter" : ""
+        }`}
+      >
+        <div className={`shrink-0 ${opening ? "launch-page-poster" : ""}`}>
+          <Poster
+            path={page.posterPath}
+            alt={page.title}
+            className="h-[7.5rem] w-[5rem] border-3 border-black object-cover"
+          />
+        </div>
+        <div className={`min-w-0 flex-1 ${opening ? "launch-page-info" : ""}`}>
+          <p className="inline-block bg-black px-2 py-0.5 font-[family-name:var(--font-mono)] text-[9px] font-black uppercase tracking-[0.16em] text-white">
+            {page.mediaType === "tv" ? "TV" : "Movie"}
+          </p>
+          <h1 className="mt-1.5 font-[family-name:var(--font-display)] text-xl font-black uppercase leading-[0.95] tracking-tight">
+            {page.title}
+            {page.year ? (
+              <span className="text-[#ef4438]"> ({page.year})</span>
+            ) : null}
+          </h1>
+          {page.genres.length > 0 ? (
+            <p className="mt-1.5 line-clamp-1 font-[family-name:var(--font-mono)] text-[10px] font-bold uppercase text-[#6657e8]">
+              {page.genres.join(" · ")}
+            </p>
+          ) : null}
+          <div className="mt-2">
+            <PageSearch
+              value={query}
+              onChange={setQuery}
+              placeholder="Search this page…"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop hero */}
+      <div className="hidden gap-6 border-4 border-black bg-[#fffdf7] p-5 shadow-[7px_7px_0_#000] md:grid md:grid-cols-[180px_1fr]">
         <div className={opening ? "launch-page-poster" : ""}>
           <Poster
             path={page.posterPath}
@@ -111,7 +156,9 @@ export function TitleView({
             ) : null}
           </h1>
           {page.genres.length > 0 ? (
-            <p className="mt-3 font-[family-name:var(--font-mono)] text-xs font-bold uppercase text-[#6657e8]">{page.genres.join(" · ")}</p>
+            <p className="mt-3 font-[family-name:var(--font-mono)] text-xs font-bold uppercase text-[#6657e8]">
+              {page.genres.join(" · ")}
+            </p>
           ) : null}
           {page.overview ? (
             <p className="mt-3 max-w-3xl border-l-4 border-[#ffd52e] pl-3 text-[15px] font-medium leading-relaxed line-clamp-4">
@@ -128,66 +175,151 @@ export function TitleView({
         </div>
       </div>
 
+      {/* Mobile tabs */}
+      {showCast && showCrew ? (
+        <div className="mt-4 grid grid-cols-2 border-4 border-black md:hidden">
+          <button
+            type="button"
+            onClick={() => setTab("cast")}
+            className={`border-r-4 border-black py-3 font-[family-name:var(--font-mono)] text-xs font-black uppercase ${
+              tab === "cast" ? "bg-[#6657e8] text-white" : "bg-[#fffdf7]"
+            }`}
+          >
+            Cast · {cast.length}
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("crew")}
+            className={`py-3 font-[family-name:var(--font-mono)] text-xs font-black uppercase ${
+              tab === "crew" ? "bg-[#ef4438]" : "bg-[#fffdf7]"
+            }`}
+          >
+            {crewTabLabel} · {crewCount}
+          </button>
+        </div>
+      ) : null}
+
+      {/* Mobile list (tabbed) */}
+      <div className={`mt-3 md:hidden ${opening ? "launch-page-lists" : ""}`}>
+        {showCast && (!showCrew || tab === "cast") ? (
+          <section className="border-4 border-black bg-[#fffdf7] shadow-[4px_4px_0_#000]">
+            {cast.length === 0 ? (
+              <p className="p-4 font-[family-name:var(--font-mono)] text-xs">
+                No cast matches.
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 gap-2 p-3">
+                {cast.map((person) => (
+                  <PersonRow
+                    key={`cast-${person.id}`}
+                    person={person}
+                    onSelect={() => onSelectPerson(person)}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+        ) : null}
+
+        {showCrew && (!showCast || tab === "crew") ? (
+          <section className="border-4 border-black bg-[#fffdf7] shadow-[4px_4px_0_#000]">
+            {crewSections.length === 0 ? (
+              <p className="p-4 font-[family-name:var(--font-mono)] text-xs">
+                No crew matches.
+              </p>
+            ) : (
+              <div className="p-3">
+                {crewSections.map(({ label, people }) => (
+                  <div key={label} className="mb-4 last:mb-0">
+                    <h3 className="mb-2 inline-block border-2 border-black bg-[#ffd52e] px-2 py-1 font-[family-name:var(--font-mono)] text-[10px] font-black uppercase tracking-[0.18em]">
+                      {label}
+                    </h3>
+                    <div className="grid grid-cols-1 gap-2">
+                      {people.map((person) => (
+                        <PersonRow
+                          key={`${label}-${person.id}`}
+                          person={person}
+                          onSelect={() => onSelectPerson(person)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        ) : null}
+      </div>
+
+      {/* Desktop two-column lists */}
       <div
-        className={`mt-8 grid gap-8 lg:items-start ${
+        className={`mt-8 hidden gap-8 lg:items-start md:grid ${
           showCast && showCrew ? "lg:grid-cols-2" : "lg:grid-cols-1"
         } ${opening ? "launch-page-lists" : ""}`}
       >
         {showCast ? (
-        <section className="min-w-0 border-4 border-black bg-[#fffdf7] shadow-[6px_6px_0_#000]">
-          <div className="sticky top-[4.5rem] z-10 flex items-baseline justify-between border-b-4 border-black bg-[#6657e8] px-4 py-3 text-white">
-            <h2 className="font-[family-name:var(--font-display)] text-2xl font-black uppercase">Cast</h2>
-            <span className="font-[family-name:var(--font-mono)] text-xs font-black">{cast.length}</span>
-          </div>
-          {cast.length === 0 ? (
-            <p className="p-4 font-[family-name:var(--font-mono)] text-xs">No cast matches.</p>
-          ) : (
-            <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2">
-              {cast.map((person) => (
-                <PersonRow
-                  key={`cast-${person.id}`}
-                  person={person}
-                  onSelect={() => onSelectPerson(person)}
-                />
-              ))}
+          <section className="min-w-0 border-4 border-black bg-[#fffdf7] shadow-[6px_6px_0_#000]">
+            <div className="sticky top-[4.5rem] z-10 flex items-baseline justify-between border-b-4 border-black bg-[#6657e8] px-4 py-3 text-white">
+              <h2 className="font-[family-name:var(--font-display)] text-2xl font-black uppercase">
+                Cast
+              </h2>
+              <span className="font-[family-name:var(--font-mono)] text-xs font-black">
+                {cast.length}
+              </span>
             </div>
-          )}
-        </section>
+            {cast.length === 0 ? (
+              <p className="p-4 font-[family-name:var(--font-mono)] text-xs">
+                No cast matches.
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2">
+                {cast.map((person) => (
+                  <PersonRow
+                    key={`cast-${person.id}`}
+                    person={person}
+                    onSelect={() => onSelectPerson(person)}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
         ) : null}
 
         {showCrew ? (
-        <section className="min-w-0 border-4 border-black bg-[#fffdf7] shadow-[6px_6px_0_#000]">
-          <div className="sticky top-[4.5rem] z-10 flex items-baseline justify-between border-b-4 border-black bg-[#ef4438] px-4 py-3">
-            <h2 className="font-[family-name:var(--font-display)] text-2xl font-black uppercase">
-              {pathFilter === "directing" ? "Directors" : "Crew"}
-            </h2>
-            <span className="font-[family-name:var(--font-mono)] text-xs font-black">
-              {crewSections.reduce((n, s) => n + s.people.length, 0)}
-            </span>
-          </div>
-          {crewSections.length === 0 ? (
-            <p className="p-4 font-[family-name:var(--font-mono)] text-xs">No crew matches.</p>
-          ) : (
-            <div className="p-4">
-            {crewSections.map(({ label, people }) => (
-              <div key={label} className="mb-6 last:mb-0">
-                <h3 className="mb-3 inline-block border-2 border-black bg-[#ffd52e] px-2 py-1 font-[family-name:var(--font-mono)] text-[10px] font-black uppercase tracking-[0.18em]">
-                  {label}
-                </h3>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {people.map((person) => (
-                    <PersonRow
-                      key={`${label}-${person.id}`}
-                      person={person}
-                      onSelect={() => onSelectPerson(person)}
-                    />
-                  ))}
-                </div>
-              </div>
-            ))}
+          <section className="min-w-0 border-4 border-black bg-[#fffdf7] shadow-[6px_6px_0_#000]">
+            <div className="sticky top-[4.5rem] z-10 flex items-baseline justify-between border-b-4 border-black bg-[#ef4438] px-4 py-3">
+              <h2 className="font-[family-name:var(--font-display)] text-2xl font-black uppercase">
+                {crewTabLabel}
+              </h2>
+              <span className="font-[family-name:var(--font-mono)] text-xs font-black">
+                {crewCount}
+              </span>
             </div>
-          )}
-        </section>
+            {crewSections.length === 0 ? (
+              <p className="p-4 font-[family-name:var(--font-mono)] text-xs">
+                No crew matches.
+              </p>
+            ) : (
+              <div className="p-4">
+                {crewSections.map(({ label, people }) => (
+                  <div key={label} className="mb-6 last:mb-0">
+                    <h3 className="mb-3 inline-block border-2 border-black bg-[#ffd52e] px-2 py-1 font-[family-name:var(--font-mono)] text-[10px] font-black uppercase tracking-[0.18em]">
+                      {label}
+                    </h3>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      {people.map((person) => (
+                        <PersonRow
+                          key={`${label}-${person.id}`}
+                          person={person}
+                          onSelect={() => onSelectPerson(person)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
         ) : null}
       </div>
     </article>

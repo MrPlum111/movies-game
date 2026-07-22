@@ -4,11 +4,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChallengeLaunchSequence } from "@/components/ChallengeLaunchSequence";
+import { HomeMobile } from "@/components/HomeMobile";
 import {
   defaultChallengeSettings,
   endpointKindLabel,
-  parseChallengeSettings,
+  GENRE_OPTIONS,
   pathFilterLabel,
+  parseChallengeSettings,
   randomChallengeSettings,
   type ChallengeSettings,
   type Difficulty,
@@ -32,6 +34,7 @@ export default function HomePage() {
   const [hydrated, setHydrated] = useState(false);
   const [pendingChallenge, setPendingChallenge] =
     useState<Challenge | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -117,6 +120,14 @@ export default function HomePage() {
     }));
   }
 
+  function setGenre(genreId: number | null) {
+    setSettings((current) => ({
+      ...current,
+      start: { ...current.start, genreId },
+      end: { ...current.end, genreId },
+    }));
+  }
+
   const difficulties: {
     value: Difficulty;
     label: string;
@@ -130,6 +141,7 @@ export default function HomePage() {
   const endpointKinds: EndpointKind[] = ["title", "actor", "director"];
   const pathFilters: PathFilter[] = ["any", "acting", "directing"];
   const rating = settings.start.minRating;
+  const genreId = settings.start.genreId;
 
   const pathBlurb =
     settings.endpointKind === "title"
@@ -140,6 +152,22 @@ export default function HomePage() {
 
   return (
     <main className="nb-dot-grid min-h-screen overflow-x-hidden bg-[#f4f0e8] text-black">
+      <HomeMobile
+        settings={settings}
+        setSettings={setSettings}
+        loading={loading}
+        error={error}
+        pathBlurb={pathBlurb}
+        onStart={() => void startClassic()}
+        onStartRandom={() => void startRandom()}
+        setYears={setYears}
+        setMinimumRating={setMinimumRating}
+        setGenre={setGenre}
+        filtersOpen={filtersOpen}
+        setFiltersOpen={setFiltersOpen}
+      />
+
+      <div className="hidden md:block">
       <nav className="border-b-4 border-black bg-black text-white">
         <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between px-8">
           <div className="flex items-center gap-4">
@@ -350,18 +378,18 @@ export default function HomePage() {
               </div>
             </section>
 
-            <section className="border-4 border-black bg-[#6657e8] p-4 text-white shadow-[7px_7px_0_#000]">
+            <section className="border-4 border-black bg-[#36ad72] p-4 shadow-[7px_7px_0_#000]">
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="font-[family-name:var(--font-mono)] text-sm font-black uppercase">
-                    ▣ Path filter
+                    ▤ Path filter
                   </h3>
                   <p className="mt-1 font-[family-name:var(--font-mono)] text-[9px]">
-                    Who you can travel through.
+                    Who you may hop through mid-run.
                   </p>
                 </div>
                 <span className="text-4xl" aria-hidden>
-                  ●
+                  ⇄
                 </span>
               </div>
               <div className="mt-4 grid grid-cols-3 gap-2">
@@ -377,13 +405,48 @@ export default function HomePage() {
                           pathFilter: filter,
                         }))
                       }
-                      className={`border-3 border-black py-4 font-[family-name:var(--font-mono)] text-[10px] font-black uppercase shadow-[3px_3px_0_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none ${
+                      className={`border-3 border-black py-4 font-[family-name:var(--font-mono)] text-[11px] font-black uppercase shadow-[3px_3px_0_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none ${
+                        active
+                          ? "bg-black text-white"
+                          : "bg-[#fffdf7] text-black"
+                      }`}
+                    >
+                      {pathFilterLabel(filter)}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
+            <section className="border-4 border-black bg-[#6657e8] p-4 text-white shadow-[7px_7px_0_#000]">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="font-[family-name:var(--font-mono)] text-sm font-black uppercase">
+                    ▣ Genre
+                  </h3>
+                  <p className="mt-1 font-[family-name:var(--font-mono)] text-[9px]">
+                    Both ends share this genre.
+                  </p>
+                </div>
+                <span className="text-4xl" aria-hidden>
+                  ●
+                </span>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-1.5">
+                {GENRE_OPTIONS.map((genre) => {
+                  const active = genreId === genre.id;
+                  return (
+                    <button
+                      key={String(genre.id)}
+                      type="button"
+                      onClick={() => setGenre(genre.id)}
+                      className={`border-3 border-black px-2.5 py-2 font-[family-name:var(--font-mono)] text-[10px] font-black uppercase shadow-[2px_2px_0_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none ${
                         active
                           ? "bg-[#ffd52e] text-black"
                           : "bg-[#fffdf7] text-black"
                       }`}
                     >
-                      {pathFilterLabel(filter)}
+                      {genre.label}
                     </button>
                   );
                 })}
@@ -507,6 +570,7 @@ export default function HomePage() {
           </span>
           <span>Made for movie lovers.</span>
         </footer>
+      </div>
       </div>
 
       {loading ? (

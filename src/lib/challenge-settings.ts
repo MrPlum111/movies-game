@@ -9,7 +9,7 @@ export type PopularityTier = 1 | 2 | 3 | 4 | 5;
 /** Shared start/end entity type */
 export type EndpointKind = "title" | "actor" | "director";
 
-/** Who you may traverse through on title ↔ person edges */
+/** Who you may traverse through on title ↔ person edges (always "any" in UI) */
 export type PathFilter = "any" | "acting" | "directing";
 
 export type EndpointSettings = {
@@ -35,7 +35,7 @@ export type ChallengeSettings = {
 };
 
 export const GENRE_OPTIONS: { id: number | null; label: string }[] = [
-  { id: null, label: "Any genre" },
+  { id: null, label: "Any" },
   { id: 28, label: "Action" },
   { id: 12, label: "Adventure" },
   { id: 16, label: "Animation" },
@@ -130,6 +130,10 @@ export function pathFilterLabel(filter: PathFilter): string {
   )[filter];
 }
 
+export function genreLabel(genreId: number | null): string {
+  return GENRE_OPTIONS.find((g) => g.id === genreId)?.label ?? "Any";
+}
+
 /** vote_count band used for discover + filtering */
 export function popularityBand(tier: PopularityTier): {
   min: number;
@@ -192,10 +196,11 @@ export function matchesEndpoint(
 export function randomChallengeSettings(): ChallengeSettings {
   const difficulties: Difficulty[] = [2, 3, 4];
   const kinds: EndpointKind[] = ["title", "actor", "director"];
-  const filters: PathFilter[] = ["any", "acting", "directing"];
+  const filters: PathFilter[] = ["any", "any", "any", "acting", "directing"];
   const ratings = [0, 5, 6, 7, 8];
   const yearFromOptions: (number | null)[] = [null, 1970, 1980, 1990, 2000, 2010];
   const yearToOptions: (number | null)[] = [null, 1999, 2009, 2019, 2030];
+  const genres = GENRE_OPTIONS.map((g) => g.id);
 
   let yearFrom =
     yearFromOptions[Math.floor(Math.random() * yearFromOptions.length)];
@@ -209,6 +214,7 @@ export function randomChallengeSettings(): ChallengeSettings {
     yearFrom,
     yearTo,
     minRating: ratings[Math.floor(Math.random() * ratings.length)],
+    genreId: genres[Math.floor(Math.random() * genres.length)],
   };
 
   return {
@@ -256,7 +262,12 @@ export function parseChallengeSettings(input: unknown): ChallengeSettings {
             : fallback.yearTo,
       minRating: Math.min(9, Math.max(0, Number(e.minRating) || 0)),
       language: "any",
-      genreId: null,
+      genreId:
+        e.genreId === null || e.genreId === undefined
+          ? null
+          : GENRE_OPTIONS.some((g) => g.id === Number(e.genreId))
+            ? Number(e.genreId)
+            : fallback.genreId,
     };
   };
 

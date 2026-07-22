@@ -116,13 +116,13 @@ export function ChallengeLaunchSequence({ challenge, onComplete }: Props) {
         </p>
       </div>
 
-      <div className="mx-auto flex min-h-[calc(100%-4rem)] max-w-6xl flex-col justify-center px-4 py-8 md:px-8 md:pb-10">
-        <div className="mb-8 flex items-end justify-between border-b-4 border-black pb-4">
+      <div className="mx-auto flex min-h-[calc(100%-4rem)] max-w-6xl flex-col justify-center px-3 py-5 md:px-8 md:py-8 md:pb-10">
+        <div className="mb-5 flex items-end justify-between border-b-4 border-black pb-3 md:mb-8 md:pb-4">
           <div>
-            <p className="font-[family-name:var(--font-mono)] text-xs font-black uppercase tracking-[0.18em]">
+            <p className="font-[family-name:var(--font-mono)] text-[10px] font-black uppercase tracking-[0.18em] md:text-xs">
               Match generator
             </p>
-            <h2 className="mt-2 font-[family-name:var(--font-display)] text-2xl font-black uppercase tracking-tight md:text-4xl">
+            <h2 className="mt-1 font-[family-name:var(--font-display)] text-xl font-black uppercase tracking-tight md:mt-2 md:text-4xl">
               {phase === "computing"
                 ? "Searching the graph…"
                 : phase === "randomizing"
@@ -130,7 +130,7 @@ export function ChallengeLaunchSequence({ challenge, onComplete }: Props) {
                   : "Your route is ready."}
             </h2>
           </div>
-          <div className="flex gap-2" aria-hidden>
+          <div className="hidden gap-2 sm:flex" aria-hidden>
             {[0, 1, 2, 3, 4, 5].map((item) => (
               <span
                 key={item}
@@ -141,7 +141,7 @@ export function ChallengeLaunchSequence({ challenge, onComplete }: Props) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 items-stretch gap-4 md:grid-cols-[1fr_auto_1fr] md:gap-6">
+        <div className="grid grid-cols-1 items-stretch gap-3 md:grid-cols-[1fr_auto_1fr] md:gap-6">
           <TitleCard
             label={showStart ? endpointCard(challenge, "start").kindLabel : "Start"}
             color="red"
@@ -160,8 +160,11 @@ export function ChallengeLaunchSequence({ challenge, onComplete }: Props) {
             locked={showStart}
           />
 
-          <div className="grid place-items-center">
-            <span className="rotate-90 text-5xl font-black md:rotate-0 md:text-7xl" aria-hidden>
+          <div className="grid place-items-center py-1 md:py-0">
+            <span
+              className="rotate-90 text-3xl font-black md:rotate-0 md:text-7xl"
+              aria-hidden
+            >
               →
             </span>
           </div>
@@ -212,15 +215,15 @@ export function ChallengeLaunchSequence({ challenge, onComplete }: Props) {
       </div>
 
       {showCountdown ? (
-        <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center bg-black/40 backdrop-blur-[1px]">
+        <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center bg-black/35 backdrop-blur-[1px]">
           <div
             key={phase === "go" ? "go" : countdown}
             className="launch-countdown text-center drop-shadow-[6px_6px_0_#000]"
           >
-            <p className="font-[family-name:var(--font-mono)] text-sm font-black uppercase tracking-[0.3em] text-[#ffd52e]">
+            <p className="font-[family-name:var(--font-mono)] text-[10px] font-black uppercase tracking-[0.3em] text-[#ffd52e] md:text-sm">
               {phase === "go" ? "Go" : "Study the match · Starting in"}
             </p>
-            <p className="font-[family-name:var(--font-display)] text-[8rem] font-black leading-none text-white sm:text-[12rem]">
+            <p className="font-[family-name:var(--font-display)] text-[5.5rem] font-black leading-none text-white md:text-[12rem]">
               {phase === "go" ? "GO!" : countdown}
             </p>
           </div>
@@ -253,11 +256,11 @@ function TitleCard({
 
   return (
     <section
-      className={`relative grid min-h-40 grid-cols-[90px_1fr] overflow-hidden border-4 border-black ${background} shadow-[8px_8px_0_#000] md:min-h-72 md:grid-cols-[150px_1fr] ${
+      className={`relative grid min-h-[7.5rem] grid-cols-[72px_1fr] overflow-hidden border-4 border-black ${background} shadow-[5px_5px_0_#000] md:min-h-72 md:grid-cols-[150px_1fr] md:shadow-[8px_8px_0_#000] ${
         locked ? "launch-card-lock" : ""
       }`}
     >
-      <div className="border-r-4 border-black bg-[#fffdf7] p-3">
+      <div className="border-r-4 border-black bg-[#fffdf7] p-2 md:p-3">
         {posterPath ? (
           <Poster
             path={posterPath}
@@ -269,31 +272,31 @@ function TitleCard({
           <div
             className={`launch-poster-scan grid h-full place-items-center border-3 border-black ${background}`}
           >
-            <span className="text-6xl" aria-hidden>
+            <span className="text-3xl md:text-6xl" aria-hidden>
               🎬
             </span>
           </div>
         )}
       </div>
 
-      <div className="flex min-w-0 flex-col justify-between p-4 md:p-6">
-        <div className="flex items-center justify-between border-b-3 border-black pb-3">
-          <p className="font-[family-name:var(--font-mono)] text-xs font-black uppercase tracking-[0.16em]">
+      <div className="flex min-w-0 flex-col justify-between p-3 md:p-6">
+        <div className="flex items-center justify-between border-b-3 border-black pb-2 md:pb-3">
+          <p className="font-[family-name:var(--font-mono)] text-[10px] font-black uppercase tracking-[0.16em] md:text-xs">
             {label}
           </p>
-          <span className="font-[family-name:var(--font-mono)] text-[10px] font-black uppercase">
+          <span className="font-[family-name:var(--font-mono)] text-[9px] font-black uppercase md:text-[10px]">
             {locked ? "Locked" : "Searching"}
           </span>
         </div>
         <div className={rolling ? "launch-title-roll" : ""}>
-          <h3 className="line-clamp-3 font-[family-name:var(--font-display)] text-2xl font-black leading-[0.95] tracking-tight md:text-4xl">
+          <h3 className="line-clamp-2 font-[family-name:var(--font-display)] text-lg font-black leading-[0.95] tracking-tight md:line-clamp-3 md:text-4xl">
             {title}
           </h3>
-          <p className="mt-3 font-[family-name:var(--font-mono)] text-sm font-bold">
+          <p className="mt-1.5 font-[family-name:var(--font-mono)] text-xs font-bold md:mt-3 md:text-sm">
             {year ?? (rolling ? "Analyzing credits…" : "Reading TMDB…")}
           </p>
         </div>
-        <p className="font-[family-name:var(--font-mono)] text-[10px] font-black uppercase">
+        <p className="hidden font-[family-name:var(--font-mono)] text-[10px] font-black uppercase md:block">
           Title ↔ Person
         </p>
       </div>

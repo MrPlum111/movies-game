@@ -8,9 +8,11 @@
 - Path peeks after a run (description, cast, directors)
 - Shareable challenge links (`/?s=movie-123&t=movie-456`)
 - Shared endpoint type: Movie / Actor / Director
-- Path filter: Any / Actors only / Directors only
+- Path filter: All / Actors only / Directors only
+- Genre filter on both endpoints (Action, Horror, Sci-Fi, …)
 - Difficulty: Normal (~4) / Hard (~6) / Expert (~8)
 - Start random (randomizes all setup settings)
+- Mobile layouts (home, play HUD, path sheet, leaderboard cards)
 
 ## Next up
 
