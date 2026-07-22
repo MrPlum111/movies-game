@@ -1,4 +1,3 @@
-import type { PathFilter } from "./challenge-settings";
 import type { MediaType, PathNode } from "./types";
 import {
   getPersonName,
@@ -26,18 +25,12 @@ export async function findShortestPath(
   target: { mediaType: MediaType; id: number },
   includeTv: boolean,
   maxClicks = 6,
-  pathFilter: PathFilter = "any",
 ): Promise<ShortestPathResult | null> {
   const startKey = titleKey(start.mediaType, start.id);
   const targetKey = titleKey(target.mediaType, target.id);
 
   if (startKey === targetKey) {
-    const meta = await getTitlePersonIds(
-      start.mediaType,
-      start.id,
-      undefined,
-      pathFilter,
-    );
+    const meta = await getTitlePersonIds(start.mediaType, start.id);
     return {
       clicks: 0,
       path: [
@@ -62,12 +55,7 @@ export async function findShortestPath(
 
     if (cur.kind === "title") {
       const { mediaType, id } = parseTitleKey(cur.key);
-      const meta = await getTitlePersonIds(
-        mediaType,
-        id,
-        MAX_CAST_FOR_GRAPH,
-        pathFilter,
-      );
+      const meta = await getTitlePersonIds(mediaType, id, MAX_CAST_FOR_GRAPH);
       if (!meta) continue;
 
       for (const personId of meta.personIds) {
@@ -86,7 +74,6 @@ export async function findShortestPath(
         Number(cur.key),
         includeTv,
         MAX_TITLES_PER_PERSON,
-        pathFilter,
       );
       for (const tKey of titles) {
         const mark = `t:${tKey}`;
@@ -97,7 +84,7 @@ export async function findShortestPath(
         if (tKey === targetKey) {
           return {
             clicks: cur.clicks + 1,
-            path: await buildPath(`t:${targetKey}`, parent, startKey, pathFilter),
+            path: await buildPath(`t:${targetKey}`, parent, startKey),
           };
         }
 
@@ -117,7 +104,6 @@ async function buildPath(
   endMark: string,
   parent: Map<string, string>,
   startKey: string,
-  pathFilter: PathFilter,
 ): Promise<PathNode[]> {
   const marks: string[] = [];
   let cur: string | undefined = endMark;
@@ -136,12 +122,7 @@ async function buildPath(
     if (mark.startsWith("t:")) {
       const key = mark.slice(2);
       const { mediaType, id } = parseTitleKey(key);
-      const meta = await getTitlePersonIds(
-        mediaType,
-        id,
-        MAX_CAST_FOR_GRAPH,
-        pathFilter,
-      );
+      const meta = await getTitlePersonIds(mediaType, id, MAX_CAST_FOR_GRAPH);
       nodes.push({
         kind: "title",
         mediaType,

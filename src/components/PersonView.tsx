@@ -3,13 +3,11 @@
 import { useMemo, useState } from "react";
 import { PageSearch, matchesQuery } from "@/components/PageSearch";
 import { Poster } from "@/components/Poster";
-import type { PathFilter } from "@/lib/challenge-settings";
 import type { PersonPage, TitleOnPerson } from "@/lib/types";
 
 type Props = {
   page: PersonPage;
   onSelectTitle: (title: TitleOnPerson) => void;
-  pathFilter?: PathFilter;
 };
 
 type Tab = "cast" | "crew";
@@ -56,16 +54,9 @@ function TitleRow({
 export function PersonView({
   page,
   onSelectTitle,
-  pathFilter = "any",
 }: Props) {
   const [query, setQuery] = useState("");
-
-  const showCast = pathFilter === "any" || pathFilter === "acting";
-  const showCrew = pathFilter === "any" || pathFilter === "directing";
-  const crewTabLabel = pathFilter === "directing" ? "Directing" : "Crew";
-  const crewSectionTitle =
-    pathFilter === "directing" ? "Directing credits" : "Crew credits";
-  const [tab, setTab] = useState<Tab>(showCast ? "cast" : "crew");
+  const [tab, setTab] = useState<Tab>("cast");
 
   const cast = useMemo(
     () =>
@@ -83,15 +74,11 @@ export function PersonView({
   );
 
   const crewSections = useMemo(() => {
-    if (!showCrew) return [];
-    const sections =
-      pathFilter === "directing"
-        ? ([["Directing", page.crew.directing]] as const)
-        : ([
-            ["Directing", page.crew.directing],
-            ["Writing", page.crew.writing],
-            ["Producing", page.crew.producing],
-          ] as const);
+    const sections = [
+      ["Directing", page.crew.directing],
+      ["Writing", page.crew.writing],
+      ["Producing", page.crew.producing],
+    ] as const;
     return sections
       .map(([label, titles]) => ({
         label,
@@ -100,7 +87,7 @@ export function PersonView({
         ),
       }))
       .filter((s) => s.titles.length > 0);
-  }, [page.crew, query, pathFilter, showCrew]);
+  }, [page.crew, query]);
 
   const crewCount = crewSections.reduce((n, s) => n + s.titles.length, 0);
 
@@ -172,8 +159,7 @@ export function PersonView({
       </div>
 
       {/* Mobile tabs */}
-      {showCast && showCrew ? (
-        <div className="mt-4 grid grid-cols-2 border-4 border-black md:hidden">
+              <div className="mt-4 grid grid-cols-2 border-4 border-black md:hidden">
           <button
             type="button"
             onClick={() => setTab("cast")}
@@ -190,14 +176,13 @@ export function PersonView({
               tab === "crew" ? "bg-[#ef4438]" : "bg-[#fffdf7]"
             }`}
           >
-            {crewTabLabel} · {crewCount}
+            Crew · {crewCount}
           </button>
         </div>
-      ) : null}
 
       {/* Mobile list */}
       <div className="mt-3 md:hidden">
-        {showCast && (!showCrew || tab === "cast") ? (
+        {tab === "cast" ? (
           <section className="border-4 border-black bg-[#fffdf7] shadow-[4px_4px_0_#000]">
             {cast.length === 0 ? (
               <p className="p-4 font-[family-name:var(--font-mono)] text-xs">
@@ -217,7 +202,7 @@ export function PersonView({
           </section>
         ) : null}
 
-        {showCrew && (!showCast || tab === "crew") ? (
+        {tab === "crew" ? (
           <section className="border-4 border-black bg-[#fffdf7] shadow-[4px_4px_0_#000]">
             {crewSections.length === 0 ? (
               <p className="p-4 font-[family-name:var(--font-mono)] text-xs">
@@ -250,11 +235,10 @@ export function PersonView({
       {/* Desktop two-column */}
       <div
         className={`mt-8 hidden gap-8 lg:items-start md:grid ${
-          showCast && showCrew ? "lg:grid-cols-2" : "lg:grid-cols-1"
+          "lg:grid-cols-2"
         }`}
       >
-        {showCast ? (
-          <section className="min-w-0 border-4 border-black bg-[#fffdf7] shadow-[6px_6px_0_#000]">
+                  <section className="min-w-0 border-4 border-black bg-[#fffdf7] shadow-[6px_6px_0_#000]">
             <div className="sticky top-[4.5rem] z-10 flex items-baseline justify-between border-b-4 border-black bg-[#6657e8] px-4 py-3 text-white">
               <h2 className="font-[family-name:var(--font-display)] text-2xl font-black uppercase">
                 Acting credits
@@ -279,13 +263,11 @@ export function PersonView({
               </div>
             )}
           </section>
-        ) : null}
 
-        {showCrew ? (
-          <section className="min-w-0 border-4 border-black bg-[#fffdf7] shadow-[6px_6px_0_#000]">
+                  <section className="min-w-0 border-4 border-black bg-[#fffdf7] shadow-[6px_6px_0_#000]">
             <div className="sticky top-[4.5rem] z-10 flex items-baseline justify-between border-b-4 border-black bg-[#ef4438] px-4 py-3">
               <h2 className="font-[family-name:var(--font-display)] text-2xl font-black uppercase">
-                {crewSectionTitle}
+                Crew credits
               </h2>
               <span className="font-[family-name:var(--font-mono)] text-xs font-black">
                 {crewCount}
@@ -316,7 +298,6 @@ export function PersonView({
               </div>
             )}
           </section>
-        ) : null}
       </div>
     </article>
   );

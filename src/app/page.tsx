@@ -9,19 +9,17 @@ import {
   defaultChallengeSettings,
   endpointKindLabel,
   GENRE_OPTIONS,
-  pathFilterLabel,
   parseChallengeSettings,
   randomChallengeSettings,
   type ChallengeSettings,
   type Difficulty,
   type EndpointKind,
-  type PathFilter,
 } from "@/lib/challenge-settings";
 import { createSession, saveSession } from "@/lib/game-session";
 import { parseSharedChallenge } from "@/lib/share-challenge";
 import type { Challenge } from "@/lib/types";
 
-const SETTINGS_KEY = "moviesgame:settings:v2";
+const SETTINGS_KEY = "moviesgame:settings:v3";
 
 export default function HomePage() {
   const router = useRouter();
@@ -139,7 +137,6 @@ export default function HomePage() {
   ];
 
   const endpointKinds: EndpointKind[] = ["title", "actor", "director"];
-  const pathFilters: PathFilter[] = ["any", "acting", "directing"];
   const rating = settings.start.minRating;
   const genreId = settings.start.genreId;
 
@@ -372,46 +369,6 @@ export default function HomePage() {
                       }`}
                     >
                       {endpointKindLabel(kind)}
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-
-            <section className="border-4 border-black bg-[#36ad72] p-4 shadow-[7px_7px_0_#000]">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-[family-name:var(--font-mono)] text-sm font-black uppercase">
-                    ▤ Path filter
-                  </h3>
-                  <p className="mt-1 font-[family-name:var(--font-mono)] text-[9px]">
-                    Who you may hop through mid-run.
-                  </p>
-                </div>
-                <span className="text-4xl" aria-hidden>
-                  ⇄
-                </span>
-              </div>
-              <div className="mt-4 grid grid-cols-3 gap-2">
-                {pathFilters.map((filter) => {
-                  const active = settings.pathFilter === filter;
-                  return (
-                    <button
-                      key={filter}
-                      type="button"
-                      onClick={() =>
-                        setSettings((current) => ({
-                          ...current,
-                          pathFilter: filter,
-                        }))
-                      }
-                      className={`border-3 border-black py-4 font-[family-name:var(--font-mono)] text-[11px] font-black uppercase shadow-[3px_3px_0_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none ${
-                        active
-                          ? "bg-black text-white"
-                          : "bg-[#fffdf7] text-black"
-                      }`}
-                    >
-                      {pathFilterLabel(filter)}
                     </button>
                   );
                 })}

@@ -2,7 +2,6 @@ import {
   matchesEndpoint,
   popularityBand,
   type EndpointSettings,
-  type PathFilter,
 } from "./challenge-settings";
 import { isLinkableCrewJob, mergeRoles, roleFromJob } from "./crew";
 import { isEligibleMovie, isEligibleTv, yearFromDate } from "./filters";
@@ -245,30 +244,23 @@ function groupCrewPeople(crew: TmdbCrew[]): {
 function uniquePeopleFromTitle(
   cast: TmdbCast[],
   crew: TmdbCrew[],
-  pathFilter: PathFilter = "any",
 ): { personIds: number[]; people: Map<number, Set<CreditRole>> } {
   const people = new Map<number, Set<CreditRole>>();
 
-  if (pathFilter === "any" || pathFilter === "acting") {
-    for (const c of cast) {
-      if (c.adult) continue;
-      const set = people.get(c.id) ?? new Set();
-      set.add("acting");
-      people.set(c.id, set);
-    }
+  for (const c of cast) {
+    if (c.adult) continue;
+    const set = people.get(c.id) ?? new Set();
+    set.add("acting");
+    people.set(c.id, set);
   }
 
-  if (pathFilter === "any" || pathFilter === "directing") {
-    for (const c of crew) {
-      if (c.adult) continue;
-      const role = roleFromJob(c.job);
-      if (!role) continue;
-      if (pathFilter === "directing" && role !== "directing") continue;
-      if (pathFilter === "any" && role === "acting") continue;
-      const set = people.get(c.id) ?? new Set();
-      set.add(role);
-      people.set(c.id, set);
-    }
+  for (const c of crew) {
+    if (c.adult) continue;
+    const role = roleFromJob(c.job);
+    if (!role || role === "acting") continue;
+    const set = people.get(c.id) ?? new Set();
+    set.add(role);
+    people.set(c.id, set);
   }
 
   return { personIds: [...people.keys()], people };
@@ -474,7 +466,6 @@ export async function getTitlePersonIds(
   mediaType: MediaType,
   id: number,
   castLimit?: number,
-  pathFilter: PathFilter = "any",
 ): Promise<{ personIds: number[]; collectionId: number | null; title: TitleRef } | null> {
   if (mediaType === "movie") {
     let data: TmdbMovieDetails;
@@ -495,7 +486,6 @@ export async function getTitlePersonIds(
     const { personIds } = uniquePeopleFromTitle(
       limitedCast,
       data.credits?.crew ?? [],
-      pathFilter,
     );
     return {
       personIds,
@@ -542,7 +532,7 @@ export async function getTitlePersonIds(
       })),
     );
   }
-  const { personIds } = uniquePeopleFromTitle(cast, crew, pathFilter);
+  const { personIds } = uniquePeopleFromTitle(cast, crew);
   return {
     personIds,
     collectionId: null,
@@ -566,7 +556,6 @@ export async function getPersonTitleKeys(
   personId: number,
   includeTv: boolean,
   titleLimit?: number,
-  pathFilter: PathFilter = "any",
 ): Promise<string[]> {
   let data: TmdbPersonDetails;
   try {
@@ -589,28 +578,23 @@ export async function getPersonTitleKeys(
     keys.push(key);
   };
 
-  if (pathFilter === "any" || pathFilter === "acting") {
-    for (const c of data.combined_credits?.cast ?? []) {
-      if (c.media_type === "tv" && !includeTv) continue;
-      if (c.media_type === "movie" && !isEligibleMovie(c)) continue;
-      if (c.media_type === "tv" && !isEligibleTv(c)) continue;
-      push(c.media_type, c.id);
-      if (titleLimit && keys.length >= titleLimit) return keys;
-    }
+  for (const c of data.combined_credits?.cast ?? []) {
+    if (c.media_type === "tv" && !includeTv) continue;
+    if (c.media_type === "movie" && !isEligibleMovie(c)) continue;
+    if (c.media_type === "tv" && !isEligibleTv(c)) continue;
+    push(c.media_type, c.id);
+    if (titleLimit && keys.length >= titleLimit) return keys;
   }
 
-  if (pathFilter === "any" || pathFilter === "directing") {
-    for (const c of data.combined_credits?.crew ?? []) {
-      const role = roleFromJob(c.job);
-      if (!role) continue;
-      if (pathFilter === "directing" && role !== "directing") continue;
-      if (pathFilter === "any" && !isLinkableCrewJob(c.job)) continue;
-      if (c.media_type === "tv" && !includeTv) continue;
-      if (c.media_type === "movie" && !isEligibleMovie(c)) continue;
-      if (c.media_type === "tv" && !isEligibleTv(c)) continue;
-      push(c.media_type, c.id);
-      if (titleLimit && keys.length >= titleLimit) return keys;
-    }
+  for (const c of data.combined_credits?.crew ?? []) {
+    const role = roleFromJob(c.job);
+    if (!role) continue;
+    if (!isLinkableCrewJob(c.job)) continue;
+    if (c.media_type === "tv" && !includeTv) continue;
+    if (c.media_type === "movie" && !isEligibleMovie(c)) continue;
+    if (c.media_type === "tv" && !isEligibleTv(c)) continue;
+    push(c.media_type, c.id);
+    if (titleLimit && keys.length >= titleLimit) return keys;
   }
 
   return keys;

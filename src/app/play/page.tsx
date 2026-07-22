@@ -211,7 +211,6 @@ export default function PlayPage() {
           difficulty: 2,
           includeTv: session?.challenge.includeTv ?? false,
           endpointKind: "title",
-          pathFilter: "any",
           start: {
             popularity: 4,
             yearFrom: null,
@@ -337,7 +336,6 @@ export default function PlayPage() {
               page={titlePage}
               onSelectPerson={selectPerson}
               opening={opening}
-              pathFilter={session.challenge.settings?.pathFilter ?? "any"}
             />
           ) : null}
 
@@ -345,7 +343,6 @@ export default function PlayPage() {
             <PersonView
               page={personPage}
               onSelectTitle={selectTitle}
-              pathFilter={session.challenge.settings?.pathFilter ?? "any"}
             />
           ) : null}
 

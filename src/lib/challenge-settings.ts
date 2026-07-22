@@ -9,9 +9,6 @@ export type PopularityTier = 1 | 2 | 3 | 4 | 5;
 /** Shared start/end entity type */
 export type EndpointKind = "title" | "actor" | "director";
 
-/** Who you may traverse through on title ↔ person edges (always "any" in UI) */
-export type PathFilter = "any" | "acting" | "directing";
-
 export type EndpointSettings = {
   popularity: PopularityTier;
   /** Inclusive; null = no bound */
@@ -29,7 +26,6 @@ export type ChallengeSettings = {
   difficulty: Difficulty;
   includeTv: boolean;
   endpointKind: EndpointKind;
-  pathFilter: PathFilter;
   start: EndpointSettings;
   end: EndpointSettings;
 };
@@ -67,7 +63,6 @@ export const defaultChallengeSettings = (): ChallengeSettings => ({
   difficulty: 2,
   includeTv: false,
   endpointKind: "title",
-  pathFilter: "any",
   start: defaultEndpoint(),
   end: defaultEndpoint(),
 });
@@ -118,16 +113,6 @@ export function endpointKindLabel(kind: EndpointKind): string {
       director: "Director",
     } as const
   )[kind];
-}
-
-export function pathFilterLabel(filter: PathFilter): string {
-  return (
-    {
-      any: "All",
-      acting: "Actors only",
-      directing: "Directors only",
-    } as const
-  )[filter];
 }
 
 export function genreLabel(genreId: number | null): string {
@@ -196,7 +181,6 @@ export function matchesEndpoint(
 export function randomChallengeSettings(): ChallengeSettings {
   const difficulties: Difficulty[] = [2, 3, 4];
   const kinds: EndpointKind[] = ["title", "actor", "director"];
-  const filters: PathFilter[] = ["any", "any", "any", "acting", "directing"];
   const ratings = [0, 5, 6, 7, 8];
   const yearFromOptions: (number | null)[] = [null, 1970, 1980, 1990, 2000, 2010];
   const yearToOptions: (number | null)[] = [null, 1999, 2009, 2019, 2030];
@@ -221,7 +205,6 @@ export function randomChallengeSettings(): ChallengeSettings {
     difficulty: difficulties[Math.floor(Math.random() * difficulties.length)],
     includeTv: Math.random() < 0.35,
     endpointKind: kinds[Math.floor(Math.random() * kinds.length)],
-    pathFilter: filters[Math.floor(Math.random() * filters.length)],
     start: { ...endpoint },
     end: { ...endpoint },
   };
@@ -278,18 +261,10 @@ export function parseChallengeSettings(input: unknown): ChallengeSettings {
       ? o.endpointKind
       : base.endpointKind;
 
-  const pathFilter: PathFilter =
-    o.pathFilter === "acting" ||
-    o.pathFilter === "directing" ||
-    o.pathFilter === "any"
-      ? o.pathFilter
-      : base.pathFilter;
-
   return {
     difficulty: clampDifficulty(o.difficulty),
     includeTv: Boolean(o.includeTv),
     endpointKind,
-    pathFilter,
     start: parseEndpoint(o.start, base.start),
     end: parseEndpoint(o.end, base.end),
   };

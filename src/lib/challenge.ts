@@ -2,7 +2,6 @@ import {
   hopsForDifficulty,
   matchesEndpoint,
   type ChallengeSettings,
-  type PathFilter,
 } from "./challenge-settings";
 import { findShortestPath, sharesPeople } from "./graph";
 import {
@@ -56,7 +55,6 @@ type PersonFrontier = {
 async function expandTitleHop(
   nodes: TitleFrontier[],
   includeTv: boolean,
-  pathFilter: PathFilter,
   beam: number,
 ): Promise<TitleFrontier[]> {
   const next: TitleFrontier[] = [];
@@ -66,7 +64,7 @@ async function expandTitleHop(
     const people = shuffle(node.personIds).slice(0, 5);
     for (const personId of people) {
       const titles = shuffle(
-        await getPersonTitleKeys(personId, includeTv, 18, pathFilter),
+        await getPersonTitleKeys(personId, includeTv, 18),
       ).slice(0, 6);
       const pName = await personLabel(personId);
 
@@ -86,7 +84,6 @@ async function expandTitleHop(
           parsed.mediaType,
           parsed.id,
           12,
-          pathFilter,
         );
         if (!meta) continue;
 
@@ -119,7 +116,6 @@ async function expandTitleHop(
 async function expandPersonHop(
   nodes: PersonFrontier[],
   includeTv: boolean,
-  pathFilter: PathFilter,
   beam: number,
 ): Promise<PersonFrontier[]> {
   const next: PersonFrontier[] = [];
@@ -133,7 +129,6 @@ async function expandPersonHop(
         parsed.mediaType,
         parsed.id,
         12,
-        pathFilter,
       );
       if (!meta) continue;
 
@@ -150,7 +145,6 @@ async function expandPersonHop(
           personId,
           includeTv,
           18,
-          pathFilter,
         );
         if (titleKeys.length === 0) continue;
 
@@ -184,7 +178,6 @@ async function generateTitleChallenge(
   settings: ChallengeSettings,
 ): Promise<Challenge> {
   const hops = hopsForDifficulty(settings.difficulty);
-  const pathFilter = settings.pathFilter;
   const startPool = shuffle(
     await fetchTitlePool(settings.start, settings.includeTv, 3),
   );
@@ -203,7 +196,6 @@ async function generateTitleChallenge(
         startSeed.mediaType,
         startSeed.id,
         undefined,
-        pathFilter,
       );
       if (!startMeta) continue;
       if (!matchesEndpoint(startMeta.title, settings.start)) continue;
@@ -231,7 +223,6 @@ async function generateTitleChallenge(
         frontier = await expandTitleHop(
           frontier,
           settings.includeTv,
-          pathFilter,
           16,
         );
         if (frontier.length === 0) break;
@@ -250,7 +241,6 @@ async function generateTitleChallenge(
               personId,
               settings.includeTv,
               20,
-              pathFilter,
             ),
           ).slice(0, 8);
           const pName = await personLabel(personId);
@@ -272,7 +262,6 @@ async function generateTitleChallenge(
               parsed.mediaType,
               parsed.id,
               undefined,
-              pathFilter,
             );
             if (!endMeta) continue;
 
@@ -336,7 +325,6 @@ async function generatePersonChallenge(
   settings: ChallengeSettings,
 ): Promise<Challenge> {
   const hops = hopsForDifficulty(settings.difficulty);
-  const pathFilter = settings.pathFilter;
   const role = settings.endpointKind === "director" ? "director" : "actor";
   const pool = shuffle(await fetchPersonPool(role, 4));
 
@@ -352,7 +340,6 @@ async function generatePersonChallenge(
         startSeed.id,
         settings.includeTv,
         24,
-        pathFilter,
       );
       if (startTitles.length === 0) continue;
 
@@ -364,7 +351,6 @@ async function generatePersonChallenge(
           parsed.mediaType,
           parsed.id,
           8,
-          pathFilter,
         );
         if (!meta) continue;
         if (
@@ -391,7 +377,6 @@ async function generatePersonChallenge(
         frontier = await expandPersonHop(
           frontier,
           settings.includeTv,
-          pathFilter,
           16,
         );
         if (frontier.length === 0) break;
@@ -410,7 +395,6 @@ async function generatePersonChallenge(
             parsed.mediaType,
             parsed.id,
             12,
-            pathFilter,
           );
           if (!meta) continue;
           if (!matchesEndpoint(meta.title, settings.end) && settings.end.minRating > 0) {
@@ -476,20 +460,14 @@ export async function buildChallengeFromEndpoints(input: {
   start: { mediaType: MediaType; id: number };
   target: { mediaType: MediaType; id: number };
   includeTv: boolean;
-  pathFilter?: PathFilter;
 }): Promise<Challenge> {
-  const pathFilter = input.pathFilter ?? "any";
   const startMeta = await getTitlePersonIds(
     input.start.mediaType,
     input.start.id,
-    undefined,
-    pathFilter,
   );
   const targetMeta = await getTitlePersonIds(
     input.target.mediaType,
     input.target.id,
-    undefined,
-    pathFilter,
   );
   if (!startMeta || !targetMeta) {
     throw new Error("Could not load one of the shared titles");
@@ -500,7 +478,6 @@ export async function buildChallengeFromEndpoints(input: {
     input.target,
     input.includeTv,
     12,
-    pathFilter,
   );
   if (!result) {
     throw new Error("No path found between these titles");

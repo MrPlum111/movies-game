@@ -5,11 +5,9 @@ import {
   defaultChallengeSettings,
   endpointKindLabel,
   GENRE_OPTIONS,
-  pathFilterLabel,
   type ChallengeSettings,
   type Difficulty,
   type EndpointKind,
-  type PathFilter,
 } from "@/lib/challenge-settings";
 
 type Props = {
@@ -34,7 +32,6 @@ const difficulties: { value: Difficulty; label: string; mark: string }[] = [
 ];
 
 const endpointKinds: EndpointKind[] = ["title", "actor", "director"];
-const pathFilters: PathFilter[] = ["any", "acting", "directing"];
 
 export function HomeMobile({
   settings,
@@ -127,34 +124,6 @@ export function HomeMobile({
                   }`}
                 >
                   {endpointKindLabel(kind)}
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
-        <section className="mt-3 border-4 border-black bg-[#36ad72] p-3 shadow-[5px_5px_0_#000]">
-          <h3 className="font-[family-name:var(--font-mono)] text-xs font-black uppercase">
-            Path filter
-          </h3>
-          <p className="mt-1 font-[family-name:var(--font-mono)] text-[9px]">
-            Who you can hop through.
-          </p>
-          <div className="mt-2 grid grid-cols-3 gap-2">
-            {pathFilters.map((filter) => {
-              const active = settings.pathFilter === filter;
-              return (
-                <button
-                  key={filter}
-                  type="button"
-                  onClick={() =>
-                    setSettings((c) => ({ ...c, pathFilter: filter }))
-                  }
-                  className={`border-3 border-black py-3 font-[family-name:var(--font-mono)] text-[9px] font-black uppercase leading-tight shadow-[2px_2px_0_#000] ${
-                    active ? "bg-black text-white" : "bg-[#fffdf7]"
-                  }`}
-                >
-                  {pathFilterLabel(filter)}
                 </button>
               );
             })}
